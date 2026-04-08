@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+.env/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Model weights
+*.pt
+*.pth
+*.ckpt
+
+# Dataset
+data/
+datasets/
+
+# OS
+.DS_Store
+Thumbs.db
