@@ -24,9 +24,11 @@ class RecommendationEnv:
 
         self.current_step = 0
 
-        state = self.current_history[:self.state_size]
+        self.state = self.current_history[:self.state_size]
 
-        return np.array(state)
+        print("Current history:", self.current_history)
+
+        return np.array(self.state)
     
     def step(self, action):
 
@@ -41,10 +43,13 @@ class RecommendationEnv:
             self.current_step >= self.max_steps
         )
 
-        next_state = rd.sample(
-            self.current_history,
-            min(self.state_size, len(self.current_history))
-        )
+        next_state = self.state.copy()
+
+        next_state.pop(0)
+
+        next_state.append(action)
+
+        self.state = next_state
 
         return (
             np.array(next_state),

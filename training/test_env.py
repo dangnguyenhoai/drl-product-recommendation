@@ -15,12 +15,10 @@ env = RecommendationEnv(
 
 state = env.reset()
 
-print("Current history:", env.current_history)
-
 print("Initial state:", state)
 
 
-for step in range(5):
+for step in range(10):
 
     action = random.randint(0, 100)
 
