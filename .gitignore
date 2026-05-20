@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+data/
+artifacts/*.pt
+artifacts/*.png
+artifacts/*.csv
+artifacts/*.json
+artifacts/smoke/
+artifacts_stable/
