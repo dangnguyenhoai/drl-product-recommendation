@@ -32,33 +32,55 @@ class RecommendationEnv:
 
         return np.array(self.state)
     
-    def step(self, action):
+    def step(self, actions):
 
-        reward = 0
+        hits = 0
 
-        if (
-            action in self.current_history
-            and action not in self.recommended_items
-        ):
-            reward = 5
-        else:
-            reward = -1
+        next_state = self.state.copy()
 
-        self.recommended_items.add(action)
+        # =========================
+        # Check recommended items
+        # =========================
+
+        for item in actions:
+
+            if (
+                item in self.current_history
+                and item not in self.recommended_items
+            ):
+
+                hits += 1
+
+                self.recommended_items.add(item)
+
+                # =========================
+                # Update state
+                # =========================
+
+                next_state.pop(0)
+
+                next_state.append(item)
+
+        # =========================
+        # Reward
+        # =========================
+
+        reward = hits * 5
+
+        # Optional penalty
+        if hits == 0:
+
+            reward = -2
+
+        # =========================
+        # Environment step
+        # =========================
 
         self.current_step += 1
 
         done = (
             self.current_step >= self.max_steps
         )
-
-        next_state = self.state.copy()
-
-        if reward > 0:
-
-            next_state.pop(0)
-
-            next_state.append(action)
 
         self.state = next_state
 

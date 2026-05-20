@@ -24,11 +24,12 @@ def evaluate():
         indexed_history = pickle.load(f)
 
     # =========================
-    # Create environment
+    # Environment settings
     # =========================
 
     state_dim = 5
-    action_dim = 20
+
+    action_dim = 500
 
     env = RecommendationEnv(
         indexed_history
@@ -54,13 +55,13 @@ def evaluate():
     )
 
     # =========================
-    # Disable exploration
+    # Evaluation mode
     # =========================
 
     agent.epsilon = 0
 
     # =========================
-    # Evaluation settings
+    # Metrics
     # =========================
 
     episodes = 20
@@ -86,10 +87,10 @@ def evaluate():
         while not done:
 
             # =========================
-            # Agent chooses action
+            # Top-K recommendation
             # =========================
 
-            action = agent.choose_action(
+            actions = agent.choose_action(
                 state
             )
 
@@ -98,7 +99,7 @@ def evaluate():
             # =========================
 
             next_state, reward, done, _ = env.step(
-                action
+                actions
             )
 
             # =========================
@@ -107,11 +108,11 @@ def evaluate():
 
             episode_reward += reward
 
-            total_recommendations += 1
+            total_recommendations += len(actions)
 
             if reward > 0:
 
-                total_hits += 1
+                total_hits += reward / 5
 
             # =========================
             # Move to next state
@@ -153,7 +154,7 @@ def evaluate():
     )
 
     print(
-        f"Hit Rate: {hit_rate:.3f}"
+        f"Hit Rate@5: {hit_rate:.3f}"
     )
 
 

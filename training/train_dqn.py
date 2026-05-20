@@ -64,7 +64,7 @@ if __name__ == "__main__":
         indexed_history = pickle.load(f)
 
     state_dim = 5
-    action_dim = 20
+    action_dim = 500
 
     env = RecommendationEnv(
         indexed_history

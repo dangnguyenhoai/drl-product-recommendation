@@ -42,8 +42,11 @@ class DQNAgent:
 
         if random.random() < self.epsilon:
 
-            return random.randint(0, self.action_dim - 1)
-        
+            return random.sample(
+                range(self.action_dim),
+                5
+            )
+                
         state = np.array(state) / self.action_dim
 
         state_tensor = torch.FloatTensor(
@@ -54,11 +57,12 @@ class DQNAgent:
 
             q_values = self.model(state_tensor)
         
-        action = torch.argmax(
-            q_values
-        ).item()
+        top_actions = torch.topk(
+            q_values[0],
+            k=5
+        ).indices
 
-        return action
+        return top_actions.tolist()
     
     def replay(self):
 
@@ -74,11 +78,15 @@ class DQNAgent:
 
         for (
             state,
-            action,
+            actions,
             reward,
             next_state,
             done
         ) in batch:
+
+            # =========================
+            # Normalize state
+            # =========================
 
             state = np.array(state) / self.action_dim
 
@@ -92,22 +100,43 @@ class DQNAgent:
                 next_state
             ).unsqueeze(0)
 
-            current_q = self.model(
+            # =========================
+            # Current Q
+            # =========================
+
+            q_values = self.model(
                 state_tensor
-            )[0][action]
+            )
+
+            current_q = q_values[0][actions]
+
+            current_q = current_q.mean()
+
+            # =========================
+            # Target Q
+            # =========================
 
             if done:
 
                 target_q = torch.tensor(
                     reward,
-                    dtype=torch.float32)
+                    dtype=torch.float32
+                )
+
             else:
 
                 with torch.no_grad():
 
-                    max_next_q = torch.max(
-                        self.model(next_state_tensor)
-                    )
+                    next_q_values = self.model(
+                        next_state_tensor
+                    )[0]
+
+                    top_next_q = torch.topk(
+                        next_q_values,
+                        k=5
+                    ).values
+
+                    max_next_q = top_next_q.mean()
 
                 target_q = (
                     reward
@@ -120,12 +149,20 @@ class DQNAgent:
                     10
                 )
 
+            # =========================
+            # Loss
+            # =========================
+
             loss = self.loss_fn(
                 current_q,
                 target_q
             )
 
             total_loss += loss.item()
+
+            # =========================
+            # Backpropagation
+            # =========================
 
             self.optimizer.zero_grad()
 
@@ -137,6 +174,10 @@ class DQNAgent:
             )
 
             self.optimizer.step()
+
+        # =========================
+        # Epsilon decay
+        # =========================
 
         if self.epsilon > self.epsilon_min:
 
