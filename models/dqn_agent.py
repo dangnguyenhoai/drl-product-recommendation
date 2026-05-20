@@ -20,9 +20,9 @@ class DQNAgent:
 
         self.epsilon = 1.0
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.999
 
-        self.learning_rate = 0.001
+        self.learning_rate = 0.0001
 
         self.batch_size = 32
 
@@ -44,7 +44,11 @@ class DQNAgent:
 
             return random.randint(0, self.action_dim - 1)
         
-        state_tensor = torch.FloatTensor(state).unsqueeze(0)
+        state = np.array(state) / self.action_dim
+
+        state_tensor = torch.FloatTensor(
+            state
+        ).unsqueeze(0)
 
         with torch.no_grad():
 
@@ -59,45 +63,83 @@ class DQNAgent:
     def replay(self):
 
         if len(self.memory) < self.batch_size:
+            return 0
 
-            return
-        
         batch = random.sample(
-            self.memory, self.batch_size
+            self.memory,
+            self.batch_size
         )
 
-        for (state, action, reward, next_state, done) in batch:
-            
-            state_tensor = torch.FloatTensor(state).unsqueeze(0)
+        total_loss = 0
 
-            next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0)
+        for (
+            state,
+            action,
+            reward,
+            next_state,
+            done
+        ) in batch:
 
-            current_q = self.model(state_tensor)[0][action]
-            
-            target_q = reward
+            state = np.array(state) / self.action_dim
 
-            with torch.no_grad():
+            next_state = np.array(next_state) / self.action_dim
 
-                max_next_q = torch.max(
-                    self.model(next_state_tensor)
+            state_tensor = torch.FloatTensor(
+                state
+            ).unsqueeze(0)
+
+            next_state_tensor = torch.FloatTensor(
+                next_state
+            ).unsqueeze(0)
+
+            current_q = self.model(
+                state_tensor
+            )[0][action]
+
+            if done:
+
+                target_q = torch.tensor(
+                    reward,
+                    dtype=torch.float32)
+            else:
+
+                with torch.no_grad():
+
+                    max_next_q = torch.max(
+                        self.model(next_state_tensor)
+                    )
+
+                target_q = (
+                    reward
+                    + self.gamma * max_next_q
                 )
 
-            target_q = (
-                reward
-                + self.gamma * max_next_q
-            )
+                target_q = torch.clamp(
+                    target_q,
+                    -10,
+                    10
+                )
 
             loss = self.loss_fn(
-                current_q, target_q
+                current_q,
+                target_q
             )
+
+            total_loss += loss.item()
 
             self.optimizer.zero_grad()
 
             loss.backward()
-            
+
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(),
+                max_norm=1.0
+            )
+
             self.optimizer.step()
 
         if self.epsilon > self.epsilon_min:
 
             self.epsilon *= self.epsilon_decay
-            
+
+        return total_loss / self.batch_size

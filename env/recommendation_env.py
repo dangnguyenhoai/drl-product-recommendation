@@ -16,6 +16,8 @@ class RecommendationEnv:
 
         self.current_history = None 
 
+        self.recommended_items = set()
+
     def reset(self):
 
         self.current_user = rd.choice(self.users)
@@ -24,9 +26,9 @@ class RecommendationEnv:
 
         self.current_step = 0
 
-        self.state = self.current_history[:self.state_size]
+        self.recommended_items = set()
 
-        print("Current history:", self.current_history)
+        self.state = self.current_history[:self.state_size]
 
         return np.array(self.state)
     
@@ -34,8 +36,15 @@ class RecommendationEnv:
 
         reward = 0
 
-        if action in self.current_history:
-            reward = 1
+        if (
+            action in self.current_history
+            and action not in self.recommended_items
+        ):
+            reward = 5
+        else:
+            reward = -1
+
+        self.recommended_items.add(action)
 
         self.current_step += 1
 
@@ -45,9 +54,11 @@ class RecommendationEnv:
 
         next_state = self.state.copy()
 
-        next_state.pop(0)
+        if reward > 0:
 
-        next_state.append(action)
+            next_state.pop(0)
+
+            next_state.append(action)
 
         self.state = next_state
 

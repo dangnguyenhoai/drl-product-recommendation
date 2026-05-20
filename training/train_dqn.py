@@ -1,70 +1,158 @@
 import pickle
+import os
+
+import torch
+
+import matplotlib.pyplot as plt
 
 from env.recommendation_env import RecommendationEnv
 
 from models.dqn_agent import DQNAgent
 
-with open(
-    "data/processed/indexed_history.pkl",
-    "rb"
-) as f:
+def show_training_results(reward_history, loss_history, epsilon_history):
 
-    indexed_history = pickle.load(f)
+    output_dir = "training_results_visualize"
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-state_dim = 5
-action_dim = 100
+    plt.figure(figsize=(10,5))
 
-env = RecommendationEnv(
-    indexed_history
-)
+    plt.plot(reward_history)
 
-agent = DQNAgent(
-    state_dim,
-    action_dim
-)
+    plt.title("Episode Reward")
 
-episodes = 50
+    plt.xlabel("Episode")
 
-for episode in range(episodes):
+    plt.ylabel("Total Reward")
 
-    state = env.reset()
+    plt.savefig(os.path.join(output_dir, "episode_reward.png"))
+    plt.close()
 
-    total_reward = 0
+    plt.figure(figsize=(10,5))
 
-    done = False
+    plt.plot(loss_history)
 
-    while not done:
+    plt.title("Training Loss")
 
-        action = agent.choose_action(state)
+    plt.xlabel("Episode")
 
-        next_state, reward, done, _ = env.step(action)
+    plt.ylabel("Loss")
 
-        agent.remember(
-            state,
-            action,
-            reward,
-            next_state,
-            done
-        )
+    plt.savefig(os.path.join(output_dir, "training_loss.png"))
+    plt.close()
 
-        agent.replay()
+    plt.figure(figsize=(10,5))
 
-        state = next_state
+    plt.plot(epsilon_history)
 
-        total_reward += reward
+    plt.title("Epsilon Decay")
 
-        print( "\n\n"
-        f" | Memory Size: {len(agent.memory)}"
-        f" | State: {state}"
-        f" | Action: {action}")
+    plt.xlabel("Episode")
 
+    plt.ylabel("Epsilon")
 
-    print(
-        f"\n\nEpisode {episode + 1}"
-        f" | Total Reward: {total_reward}"
-        f" | Epsilon: {agent.epsilon:.3f}"
-        f" | Memory Size: {len(agent.memory)}"
-        f" | State: {state}"
-        f" | Action: {action}"
+    plt.savefig(os.path.join(output_dir, "epsilon_decay.png"))
+    plt.close()
+
+if __name__ == "__main__":
+    with open(
+        "data/processed/indexed_history.pkl",
+        "rb"
+    ) as f:
+
+        indexed_history = pickle.load(f)
+
+    state_dim = 5
+    action_dim = 20
+
+    env = RecommendationEnv(
+        indexed_history
     )
 
+    agent = DQNAgent(
+        state_dim,
+        action_dim
+    )
+
+    episodes = 500
+
+    reward_history = []
+
+    loss_history = []
+
+    epsilon_history = []
+
+    for episode in range(episodes):
+
+        state = env.reset()
+
+        total_reward = 0
+
+        done = False
+
+        episode_loss = 0
+
+        step_count = 0
+
+        while not done:
+
+            action = agent.choose_action(state)
+
+            next_state, reward, done, _ = env.step(action)
+
+            agent.remember(
+                state,
+                action,
+                reward,
+                next_state,
+                done
+            )
+
+            step_count += 1
+
+            loss = 0
+
+            if (
+                len(agent.memory)
+                > agent.batch_size
+                and step_count % 4 == 0
+            ):
+
+                loss = agent.replay()
+
+            episode_loss += loss
+
+            state = next_state
+
+            total_reward += reward
+
+        #     print( "\n\n"
+        #     f" | Memory Size: {len(agent.memory)}"
+        #     f" | State: {state}"
+        #     f" | Action: {action}")
+
+
+        # print(
+        #     f"\n\nEpisode {episode + 1}"
+        #     f" | Total Reward: {total_reward}"
+        #     f" | Epsilon: {agent.epsilon:.3f}"
+        #     f" | Memory Size: {len(agent.memory)}"
+        #     f" | State: {state}"
+        #     f" | Action: {action}"
+        # )
+
+        print(f"\n\nEpisode {episode + 1}")
+
+        reward_history.append(total_reward)
+
+        loss_history.append(episode_loss)
+
+        epsilon_history.append(agent.epsilon)
+
+    torch.save(
+        agent.model.state_dict(),
+        "models/dqn_weights.pth"
+    )
+
+    show_training_results(reward_history, loss_history, epsilon_history)
