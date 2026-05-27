@@ -54,6 +54,17 @@ def parse_args():
         help="Directory to save training plots",
     )
 
+    parser.add_argument("--gamma", type=float, default=0.99)
+    parser.add_argument("--epsilon", type=float, default=1.0)
+    parser.add_argument("--epsilon_min", type=float, default=0.05)
+    parser.add_argument("--epsilon_decay", type=float, default=0.995)
+    parser.add_argument("--lr", type=float, default=0.0001)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--memory_size", type=int, default=10000)
+    parser.add_argument("--top_k", type=int, default=5)
+    parser.add_argument("--target_update_freq", type=int, default=100)
+    parser.add_argument("--device", type=str, default="auto")
+
     return parser.parse_args()
 
 
@@ -115,11 +126,14 @@ def infer_action_dim(valid_actions):
 def train(args):
     indexed_history = load_indexed_history(args.data_path)
 
-    env = RecommendationEnv(indexed_history)
+    env = RecommendationEnv(
+        indexed_history,
+        top_k=args.top_k,
+    )
 
     valid_actions = get_valid_actions(indexed_history)
 
-    if args.action_dim is None:
+    if args.action_dim is None: 
         args.action_dim = infer_action_dim(valid_actions)
 
     print(f"Using action_dim: {args.action_dim}")
@@ -129,6 +143,16 @@ def train(args):
         state_dim=args.state_dim,
         action_dim=args.action_dim,
         valid_actions=valid_actions,
+        gamma=args.gamma,
+        epsilon=args.epsilon,
+        epsilon_min=args.epsilon_min,
+        epsilon_decay=args.epsilon_decay,
+        learning_rate=args.lr,
+        batch_size=args.batch_size,
+        memory_size=args.memory_size,
+        top_k=args.top_k,
+        target_update_freq=args.target_update_freq,
+        device=args.device,
     )
 
     model_dir = os.path.dirname(args.model_path)
