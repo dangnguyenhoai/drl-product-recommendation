@@ -99,9 +99,12 @@ However, the policy inspection still shows that recommendations concentrate arou
 | Random | -6.530 | 0.0143 |
 | Popularity | -6.240 | 0.0204 |
 | DQN + item embedding + valid action mask + no-repeat action mask | -7.100 | 0.0150 |
+| Recent-item baseline | 2.250 | 0.0713 |
 
 ### Interpretation
 
 Under the stricter temporal train/test split, the DQN model slightly outperforms the random baseline in HitRate@5 but does not outperform the popularity baseline. This means the current DQN policy is not yet strong enough to claim superiority over a simple popularity-based recommender.
 
 The previous full-history evaluation showed DQN outperforming both baselines, but that result should be treated as less reliable because training and evaluation used the same processed history source.
+
+The recent-item baseline substantially outperforms the current DQN model. This indicates that the dataset has a strong short-term repetition signal, but the current DQN policy fails to exploit it. Therefore, the current DQN should not be claimed as the best-performing recommender under the temporal split setting.
