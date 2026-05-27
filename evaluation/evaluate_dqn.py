@@ -1,163 +1,136 @@
+import argparse
+import os
 import pickle
+
 import torch
 
-from env.recommendation_env import (
-    RecommendationEnv
-)
-
-from models.dqn_agent import (
-    DQNAgent
-)
+from env.recommendation_env import RecommendationEnv
+from models.dqn_agent import DQNAgent
 
 
-def evaluate():
+def parse_args():
+    parser = argparse.ArgumentParser()
 
-    # =========================
-    # Load processed data
-    # =========================
-
-    with open(
-        "data/processed/indexed_history.pkl",
-        "rb"
-    ) as f:
-
-        indexed_history = pickle.load(f)
-
-    # =========================
-    # Environment settings
-    # =========================
-
-    state_dim = 5
-
-    action_dim = 500
-
-    env = RecommendationEnv(
-        indexed_history
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default="data/processed/indexed_history.pkl",
+        help="Path to processed indexed history pickle file",
     )
 
-    # =========================
-    # Create agent
-    # =========================
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        default="outputs/checkpoints/dqn_weights.pth",
+        help="Path to trained DQN model weights",
+    )
+
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=20,
+        help="Number of evaluation episodes",
+    )
+
+    parser.add_argument(
+        "--state_dim",
+        type=int,
+        default=5,
+        help="State dimension",
+    )
+
+    parser.add_argument(
+        "--action_dim",
+        type=int,
+        default=500,
+        help="Number of possible item actions",
+    )
+
+    return parser.parse_args()
+
+
+def load_indexed_history(data_path):
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(
+            f"Data file not found: {data_path}. "
+            "Check your --data_path."
+        )
+
+    with open(data_path, "rb") as f:
+        return pickle.load(f)
+
+
+def load_agent(args):
+    if not os.path.exists(args.model_path):
+        raise FileNotFoundError(
+            f"Model file not found: {args.model_path}. "
+            "Train the model first or check your --model_path."
+        )
 
     agent = DQNAgent(
-        state_dim,
-        action_dim
+        args.state_dim,
+        args.action_dim,
     )
-
-    # =========================
-    # Load trained model
-    # =========================
 
     agent.model.load_state_dict(
         torch.load(
-            "models/dqn_weights.pth"
+            args.model_path,
+            map_location="cpu",
         )
     )
 
-    # =========================
-    # Evaluation mode
-    # =========================
+    agent.model.eval()
+    agent.epsilon = 0.0
 
-    agent.epsilon = 0
+    return agent
 
-    # =========================
-    # Metrics
-    # =========================
 
-    episodes = 20
+def evaluate(args):
+    indexed_history = load_indexed_history(args.data_path)
+
+    env = RecommendationEnv(indexed_history)
+    agent = load_agent(args)
 
     total_rewards = []
-
     total_hits = 0
-
     total_recommendations = 0
 
-    # =========================
-    # Evaluation loop
-    # =========================
-
-    for episode in range(episodes):
-
+    for episode in range(args.episodes):
         state = env.reset()
-
         done = False
-
         episode_reward = 0
 
         while not done:
-
-            # =========================
-            # Top-K recommendation
-            # =========================
-
-            actions = agent.choose_action(
-                state
-            )
-
-            # =========================
-            # Environment response
-            # =========================
-
-            next_state, reward, done, _ = env.step(
-                actions
-            )
-
-            # =========================
-            # Metrics
-            # =========================
+            actions = agent.choose_action(state)
+            next_state, reward, done, _ = env.step(actions)
 
             episode_reward += reward
-
             total_recommendations += len(actions)
 
             if reward > 0:
-
                 total_hits += reward / 5
-
-            # =========================
-            # Move to next state
-            # =========================
 
             state = next_state
 
-        total_rewards.append(
-            episode_reward
-        )
+        total_rewards.append(episode_reward)
 
         print(
-            f"Episode {episode + 1}"
+            f"Episode {episode + 1}/{args.episodes}"
             f" | Reward: {episode_reward}"
         )
 
-    # =========================
-    # Final metrics
-    # =========================
+    average_reward = sum(total_rewards) / len(total_rewards)
 
-    average_reward = (
-        sum(total_rewards)
-        / len(total_rewards)
-    )
-
-    hit_rate = (
-        total_hits
-        / total_recommendations
-    )
-
-    # =========================
-    # Results
-    # =========================
+    if total_recommendations == 0:
+        hit_rate = 0
+    else:
+        hit_rate = total_hits / total_recommendations
 
     print("\n===== Evaluation Results =====")
-
-    print(
-        f"Average Reward: {average_reward:.3f}"
-    )
-
-    print(
-        f"Hit Rate@5: {hit_rate:.3f}"
-    )
+    print(f"Average Reward: {average_reward:.3f}")
+    print(f"Hit Rate@5: {hit_rate:.3f}")
 
 
 if __name__ == "__main__":
-
-    evaluate()
+    args = parse_args()
+    evaluate(args)
