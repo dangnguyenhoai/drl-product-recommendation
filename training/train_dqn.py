@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 import pickle
 
@@ -54,6 +55,13 @@ def parse_args():
         help="Directory to save training plots",
     )
 
+    parser.add_argument(
+        "--log_path",
+        type=str,
+        default="outputs/logs/train_log.csv",
+        help="Where to save training log CSV",
+    )
+
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--epsilon", type=float, default=1.0)
     parser.add_argument("--epsilon_min", type=float, default=0.05)
@@ -65,11 +73,20 @@ def parse_args():
     parser.add_argument("--target_update_freq", type=int, default=100)
     parser.add_argument("--device", type=str, default="auto")
 
+    parser.add_argument("--embedding_dim", type=int, default=32)
+    parser.add_argument("--hidden_dim", type=int, default=128)
+
     return parser.parse_args()
 
 
 def ensure_dir(path):
     os.makedirs(path, exist_ok=True)
+
+
+def ensure_parent_dir(file_path):
+    parent_dir = os.path.dirname(file_path)
+    if parent_dir:
+        ensure_dir(parent_dir)
 
 
 def show_training_results(reward_history, loss_history, epsilon_history, plot_dir):
@@ -110,6 +127,7 @@ def load_indexed_history(data_path):
     with open(data_path, "rb") as f:
         return pickle.load(f)
 
+
 def get_valid_actions(indexed_history):
     valid_actions = set()
 
@@ -123,21 +141,53 @@ def infer_action_dim(valid_actions):
     return max(valid_actions) + 1
 
 
+def save_training_log(log_path, reward_history, loss_history, epsilon_history):
+    ensure_parent_dir(log_path)
+
+    with open(log_path, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+
+        writer.writerow(
+            [
+                "episode",
+                "reward",
+                "loss",
+                "epsilon",
+            ]
+        )
+
+        for idx, (reward, loss, epsilon) in enumerate(
+            zip(reward_history, loss_history, epsilon_history),
+            start=1,
+        ):
+            writer.writerow(
+                [
+                    idx,
+                    reward,
+                    loss,
+                    epsilon,
+                ]
+            )
+
+
 def train(args):
     indexed_history = load_indexed_history(args.data_path)
 
-    env = RecommendationEnv(
-        indexed_history,
-        top_k=args.top_k,
-    )
-
     valid_actions = get_valid_actions(indexed_history)
 
-    if args.action_dim is None: 
+    if args.action_dim is None:
         args.action_dim = infer_action_dim(valid_actions)
 
     print(f"Using action_dim: {args.action_dim}")
     print(f"Using valid actions: {len(valid_actions)}")
+    print(f"Using embedding_dim: {args.embedding_dim}")
+    print(f"Using hidden_dim: {args.hidden_dim}")
+
+    env = RecommendationEnv(
+        indexed_history,
+        state_size=args.state_dim,
+        top_k=args.top_k,
+    )
 
     agent = DQNAgent(
         state_dim=args.state_dim,
@@ -153,11 +203,13 @@ def train(args):
         top_k=args.top_k,
         target_update_freq=args.target_update_freq,
         device=args.device,
+        embedding_dim=args.embedding_dim,
+        hidden_dim=args.hidden_dim,
     )
 
-    model_dir = os.path.dirname(args.model_path)
-    if model_dir:
-        ensure_dir(model_dir)
+    ensure_parent_dir(args.model_path)
+    ensure_parent_dir(args.log_path)
+    ensure_dir(args.plot_dir)
 
     reward_history = []
     loss_history = []
@@ -183,7 +235,6 @@ def train(args):
             )
 
             step_count += 1
-            loss = 0
 
             if len(agent.memory) > agent.batch_size and step_count % 4 == 0:
                 loss = agent.replay()
@@ -212,8 +263,16 @@ def train(args):
         args.plot_dir,
     )
 
+    save_training_log(
+        args.log_path,
+        reward_history,
+        loss_history,
+        epsilon_history,
+    )
+
     print(f"\nSaved model to: {args.model_path}")
     print(f"Saved plots to: {args.plot_dir}")
+    print(f"Saved log to: {args.log_path}")
 
 
 if __name__ == "__main__":

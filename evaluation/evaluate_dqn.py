@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument(
         "--episodes",
         type=int,
-        default=20,
+        default=100,
         help="Number of evaluation episodes",
     )
 
@@ -36,7 +36,7 @@ def parse_args():
         "--state_dim",
         type=int,
         default=5,
-        help="State dimension",
+        help="State dimension / history window size",
     )
 
     parser.add_argument(
@@ -44,6 +44,34 @@ def parse_args():
         type=int,
         default=None,
         help="Number of possible item actions. If omitted, inferred from data.",
+    )
+
+    parser.add_argument(
+        "--top_k",
+        type=int,
+        default=5,
+        help="Number of recommended items",
+    )
+
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        help="Device: auto, cpu, or cuda",
+    )
+
+    parser.add_argument(
+        "--embedding_dim",
+        type=int,
+        default=32,
+        help="Item embedding dimension",
+    )
+
+    parser.add_argument(
+        "--hidden_dim",
+        type=int,
+        default=128,
+        help="Hidden layer dimension",
     )
 
     return parser.parse_args()
@@ -59,6 +87,7 @@ def load_indexed_history(data_path):
     with open(data_path, "rb") as f:
         return pickle.load(f)
 
+
 def get_valid_actions(indexed_history):
     valid_actions = set()
 
@@ -71,6 +100,7 @@ def get_valid_actions(indexed_history):
 def infer_action_dim(valid_actions):
     return max(valid_actions) + 1
 
+
 def load_agent(args, valid_actions):
     if not os.path.exists(args.model_path):
         raise FileNotFoundError(
@@ -82,16 +112,20 @@ def load_agent(args, valid_actions):
         state_dim=args.state_dim,
         action_dim=args.action_dim,
         valid_actions=valid_actions,
+        top_k=args.top_k,
+        device=args.device,
+        embedding_dim=args.embedding_dim,
+        hidden_dim=args.hidden_dim,
     )
 
-    agent.model.load_state_dict(
-        torch.load(
-            args.model_path,
-            map_location="cpu",
-        )
+    state_dict = torch.load(
+        args.model_path,
+        map_location=agent.device,
     )
 
+    agent.model.load_state_dict(state_dict)
     agent.model.eval()
+
     agent.epsilon = 0.0
 
     return agent
@@ -107,9 +141,20 @@ def evaluate(args):
 
     print(f"Using action_dim: {args.action_dim}")
     print(f"Using valid actions: {len(valid_actions)}")
+    print(f"Using embedding_dim: {args.embedding_dim}")
+    print(f"Using hidden_dim: {args.hidden_dim}")
+    print(f"Using top_k: {args.top_k}")
 
-    env = RecommendationEnv(indexed_history)
-    agent = load_agent(args, valid_actions)
+    env = RecommendationEnv(
+        indexed_history,
+        state_size=args.state_dim,
+        top_k=args.top_k,
+    )
+
+    agent = load_agent(
+        args=args,
+        valid_actions=valid_actions,
+    )
 
     total_rewards = []
     total_hits = 0
@@ -122,13 +167,11 @@ def evaluate(args):
 
         while not done:
             actions = agent.choose_action(state)
-            next_state, reward, done, _ = env.step(actions)
+            next_state, reward, done, info = env.step(actions)
 
             episode_reward += reward
+            total_hits += info.get("hits", 0)
             total_recommendations += len(actions)
-
-            if reward > 0:
-                total_hits += reward / 5
 
             state = next_state
 
@@ -142,13 +185,13 @@ def evaluate(args):
     average_reward = sum(total_rewards) / len(total_rewards)
 
     if total_recommendations == 0:
-        hit_rate = 0
+        hit_rate = 0.0
     else:
         hit_rate = total_hits / total_recommendations
 
     print("\n===== Evaluation Results =====")
     print(f"Average Reward: {average_reward:.3f}")
-    print(f"Hit Rate@5: {hit_rate:.3f}")
+    print(f"Hit Rate@{args.top_k}: {hit_rate:.4f}")
 
 
 if __name__ == "__main__":

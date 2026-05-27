@@ -25,6 +25,8 @@ class DQNAgent:
         top_k=5,
         target_update_freq=100,
         device="auto",
+        embedding_dim=32,
+        hidden_dim=128,
     ):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -56,20 +58,37 @@ class DQNAgent:
         self.batch_size = batch_size
         self.top_k = top_k
         self.target_update_freq = target_update_freq
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
 
         if device == "auto":
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu"
+            )
         else:
             self.device = torch.device(device)
 
-        self.valid_actions_tensor = torch.LongTensor(self.valid_actions).to(self.device)
+        self.valid_actions_tensor = torch.LongTensor(
+            self.valid_actions
+        ).to(self.device)
 
         self.memory = deque(maxlen=memory_size)
 
-        self.model = DQN(state_dim, action_dim).to(self.device)
-        self.target_model = DQN(state_dim, action_dim).to(self.device)
-        self.update_target_network()
+        self.model = DQN(
+            state_dim=state_dim,
+            action_dim=action_dim,
+            embedding_dim=embedding_dim,
+            hidden_dim=hidden_dim,
+        ).to(self.device)
 
+        self.target_model = DQN(
+            state_dim=state_dim,
+            action_dim=action_dim,
+            embedding_dim=embedding_dim,
+            hidden_dim=hidden_dim,
+        ).to(self.device)
+
+        self.update_target_network()
         self.target_model.eval()
 
         self.optimizer = optim.Adam(
@@ -101,8 +120,8 @@ class DQNAgent:
                 self.top_k,
             )
 
-        state = np.array(state, dtype=np.float32) / self.action_dim
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        state = np.array(state, dtype=np.int64)
+        state_tensor = torch.LongTensor(state).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
             q_values = self.model(state_tensor)[0]
@@ -130,15 +149,15 @@ class DQNAgent:
         total_loss = 0
 
         for state, actions, reward, next_state, done in batch:
-            state = np.array(state, dtype=np.float32) / self.action_dim
-            next_state = np.array(next_state, dtype=np.float32) / self.action_dim
+            state = np.array(state, dtype=np.int64)
+            next_state = np.array(next_state, dtype=np.int64)
 
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-            next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0).to(self.device)
+            state_tensor = torch.LongTensor(state).unsqueeze(0).to(self.device)
+            next_state_tensor = torch.LongTensor(next_state).unsqueeze(0).to(self.device)
 
             q_values = self.model(state_tensor)[0]
-            action_tensor = torch.LongTensor(actions).to(self.device)
 
+            action_tensor = torch.LongTensor(actions).to(self.device)
             current_q = q_values[action_tensor].mean()
 
             if done:
@@ -161,6 +180,7 @@ class DQNAgent:
                     max_next_q = top_next_q.mean()
 
                     target_q = reward + self.gamma * max_next_q
+
                     target_q = torch.clamp(
                         target_q,
                         min=-10,
@@ -191,5 +211,8 @@ class DQNAgent:
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+
+            if self.epsilon < self.epsilon_min:
+                self.epsilon = self.epsilon_min
 
         return total_loss / self.batch_size
