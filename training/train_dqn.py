@@ -36,8 +36,8 @@ def parse_args():
     parser.add_argument(
         "--action_dim",
         type=int,
-        default=500,
-        help="Number of possible item actions",
+        default=None,
+        help="Number of possible item actions. If omitted, inferred from data.",
     )
 
     parser.add_argument(
@@ -99,15 +99,36 @@ def load_indexed_history(data_path):
     with open(data_path, "rb") as f:
         return pickle.load(f)
 
+def get_valid_actions(indexed_history):
+    valid_actions = set()
+
+    for history in indexed_history.values():
+        valid_actions.update(history)
+
+    return sorted(valid_actions)
+
+
+def infer_action_dim(valid_actions):
+    return max(valid_actions) + 1
+
 
 def train(args):
     indexed_history = load_indexed_history(args.data_path)
 
     env = RecommendationEnv(indexed_history)
 
+    valid_actions = get_valid_actions(indexed_history)
+
+    if args.action_dim is None:
+        args.action_dim = infer_action_dim(valid_actions)
+
+    print(f"Using action_dim: {args.action_dim}")
+    print(f"Using valid actions: {len(valid_actions)}")
+
     agent = DQNAgent(
-        args.state_dim,
-        args.action_dim,
+        state_dim=args.state_dim,
+        action_dim=args.action_dim,
+        valid_actions=valid_actions,
     )
 
     model_dir = os.path.dirname(args.model_path)

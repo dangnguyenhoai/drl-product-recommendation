@@ -14,6 +14,7 @@ class DQNAgent:
         self,
         state_dim,
         action_dim,
+        valid_actions=None,
         gamma=0.99,
         epsilon=1.0,
         epsilon_min=0.01,
@@ -28,6 +29,25 @@ class DQNAgent:
         self.state_dim = state_dim
         self.action_dim = action_dim
 
+        if valid_actions is None:
+            self.valid_actions = list(range(action_dim))
+        else:
+            self.valid_actions = sorted(set(valid_actions))
+
+        if len(self.valid_actions) < top_k:
+            raise ValueError(
+                f"valid_actions has only {len(self.valid_actions)} items, "
+                f"but top_k={top_k}."
+            )
+
+        max_valid_action = max(self.valid_actions)
+        if max_valid_action >= action_dim:
+            raise ValueError(
+                f"max valid action is {max_valid_action}, "
+                f"but action_dim is {action_dim}. "
+                "action_dim must be greater than max item id."
+            )
+
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
@@ -41,6 +61,8 @@ class DQNAgent:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device(device)
+
+        self.valid_actions_tensor = torch.LongTensor(self.valid_actions).to(self.device)
 
         self.memory = deque(maxlen=memory_size)
 
@@ -75,20 +97,24 @@ class DQNAgent:
     def choose_action(self, state):
         if random.random() < self.epsilon:
             return random.sample(
-                range(self.action_dim),
+                self.valid_actions,
                 self.top_k,
             )
 
         state = np.array(state, dtype=np.float32) / self.action_dim
-
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
-            q_values = self.model(state_tensor)
-            top_actions = torch.topk(
-                q_values[0],
+            q_values = self.model(state_tensor)[0]
+
+            valid_q_values = q_values[self.valid_actions_tensor]
+
+            top_indices = torch.topk(
+                valid_q_values,
                 k=self.top_k,
             ).indices
+
+            top_actions = self.valid_actions_tensor[top_indices]
 
         return top_actions.cpu().tolist()
 
@@ -110,8 +136,10 @@ class DQNAgent:
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
             next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0).to(self.device)
 
-            q_values = self.model(state_tensor)
-            current_q = q_values[0][actions].mean()
+            q_values = self.model(state_tensor)[0]
+            action_tensor = torch.LongTensor(actions).to(self.device)
+
+            current_q = q_values[action_tensor].mean()
 
             if done:
                 target_q = torch.tensor(
@@ -122,10 +150,14 @@ class DQNAgent:
             else:
                 with torch.no_grad():
                     next_q_values = self.target_model(next_state_tensor)[0]
+
+                    valid_next_q_values = next_q_values[self.valid_actions_tensor]
+
                     top_next_q = torch.topk(
-                        next_q_values,
+                        valid_next_q_values,
                         k=self.top_k,
                     ).values
+
                     max_next_q = top_next_q.mean()
 
                     target_q = reward + self.gamma * max_next_q
