@@ -76,3 +76,32 @@ However, the policy inspection still shows that recommendations concentrate arou
 - The model uses item id embeddings but no user embeddings or item metadata.
 - The DQN replay update is still sample-by-sample, not vectorized.
 - The recommendation policy still tends to concentrate on a small group of items.
+
+## Temporal Train/Test Split Results
+
+### Split Statistics
+
+- Input users: 93
+- Kept users: 37
+- Skipped users: 56
+- Train interactions: 3232
+- Test interactions: 827
+- Train users: 37
+- Test users: 37
+- Train unique items: 407
+- Test unique items: 295
+- Global action_dim: 499
+
+### Test Results
+
+| Method | Average Reward | HitRate@5 |
+|---|---:|---:|
+| Random | -6.530 | 0.0143 |
+| Popularity | -6.240 | 0.0204 |
+| DQN + item embedding + valid action mask + no-repeat action mask | -7.100 | 0.0150 |
+
+### Interpretation
+
+Under the stricter temporal train/test split, the DQN model slightly outperforms the random baseline in HitRate@5 but does not outperform the popularity baseline. This means the current DQN policy is not yet strong enough to claim superiority over a simple popularity-based recommender.
+
+The previous full-history evaluation showed DQN outperforming both baselines, but that result should be treated as less reliable because training and evaluation used the same processed history source.
