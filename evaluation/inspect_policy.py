@@ -23,6 +23,7 @@ def parse_args():
     parser.add_argument("--embedding_dim", type=int, default=32)
     parser.add_argument("--hidden_dim", type=int, default=128)
     parser.add_argument("--device", type=str, default="auto")
+    parser.add_argument("--recent_boost", type=float, default=0.0)
 
     return parser.parse_args()
 
@@ -57,6 +58,7 @@ def load_agent(args, valid_actions):
         device=args.device,
         embedding_dim=args.embedding_dim,
         hidden_dim=args.hidden_dim,
+        recent_boost=args.recent_boost,
     )
 
     state_dict = torch.load(
@@ -98,6 +100,7 @@ def main(args):
     print(f"Using valid actions: {len(valid_actions)}")
     print(f"Using embedding_dim: {args.embedding_dim}")
     print(f"Using hidden_dim: {args.hidden_dim}")
+    print(f"Using recent_boost: {args.recent_boost}")
 
     for episode in range(args.episodes):
         state = env.reset()

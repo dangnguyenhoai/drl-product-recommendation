@@ -75,6 +75,7 @@ def parse_args():
 
     parser.add_argument("--embedding_dim", type=int, default=32)
     parser.add_argument("--hidden_dim", type=int, default=128)
+    parser.add_argument("--recent_boost", type=float, default=0.0)
 
     return parser.parse_args()
 
@@ -182,6 +183,7 @@ def train(args):
     print(f"Using valid actions: {len(valid_actions)}")
     print(f"Using embedding_dim: {args.embedding_dim}")
     print(f"Using hidden_dim: {args.hidden_dim}")
+    print(f"Using recent_boost: {args.recent_boost}")
 
     env = RecommendationEnv(
         indexed_history,
@@ -205,6 +207,7 @@ def train(args):
         device=args.device,
         embedding_dim=args.embedding_dim,
         hidden_dim=args.hidden_dim,
+        recent_boost=args.recent_boost,
     )
 
     ensure_parent_dir(args.model_path)

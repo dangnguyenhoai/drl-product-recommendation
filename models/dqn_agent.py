@@ -27,6 +27,7 @@ class DQNAgent:
         device="auto",
         embedding_dim=32,
         hidden_dim=128,
+        recent_boost=0.0,
     ):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -60,6 +61,7 @@ class DQNAgent:
         self.target_update_freq = target_update_freq
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
+        self.recent_boost = recent_boost
 
         if device == "auto":
             self.device = torch.device(
@@ -131,6 +133,29 @@ class DQNAgent:
 
         with torch.no_grad():
             q_values = self.model(state_tensor)[0]
+
+            if self.recent_boost != 0.0:
+                banned_action_set = (
+                    set()
+                    if banned_actions is None
+                    else set(int(action) for action in banned_actions)
+                )
+                recent_items = set(int(item) for item in state)
+                boosted_actions = [
+                    action
+                    for action in available_actions
+                    if (
+                        action in recent_items
+                        and action not in banned_action_set
+                    )
+                ]
+
+                if boosted_actions:
+                    q_values = q_values.clone()
+                    boosted_actions_tensor = torch.LongTensor(
+                        boosted_actions
+                    ).to(self.device)
+                    q_values[boosted_actions_tensor] += self.recent_boost
 
             available_q_values = q_values[available_actions_tensor]
 

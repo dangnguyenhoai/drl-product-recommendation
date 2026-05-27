@@ -74,6 +74,13 @@ def parse_args():
         help="Hidden layer dimension",
     )
 
+    parser.add_argument(
+        "--recent_boost",
+        type=float,
+        default=0.0,
+        help="Q-value boost applied to recent state items during action selection",
+    )
+
     return parser.parse_args()
 
 
@@ -116,6 +123,7 @@ def load_agent(args, valid_actions):
         device=args.device,
         embedding_dim=args.embedding_dim,
         hidden_dim=args.hidden_dim,
+        recent_boost=args.recent_boost,
     )
 
     state_dict = torch.load(
@@ -144,6 +152,7 @@ def evaluate(args):
     print(f"Using embedding_dim: {args.embedding_dim}")
     print(f"Using hidden_dim: {args.hidden_dim}")
     print(f"Using top_k: {args.top_k}")
+    print(f"Using recent_boost: {args.recent_boost}")
 
     env = RecommendationEnv(
         indexed_history,
