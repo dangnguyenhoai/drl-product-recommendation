@@ -107,7 +107,10 @@ def main(args):
         print(f"\n--- Episode {episode + 1} ---")
 
         while not done:
-            actions = agent.choose_action(state)
+            actions = agent.choose_action(
+                state,
+                banned_actions=env.recommended_items,
+            )
             next_state, reward, done, info = env.step(actions)
 
             target_items = info.get("target_items", [])

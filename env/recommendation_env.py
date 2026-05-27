@@ -53,7 +53,7 @@ class RecommendationEnv:
             self.pointer : self.pointer + self.state_size
         ]
 
-        return np.array(self.state, dtype=np.float32)
+        return np.array(self.state, dtype=np.int64)
 
     def step(self, actions):
         if not isinstance(actions, (list, tuple, np.ndarray)):
@@ -112,4 +112,4 @@ class RecommendationEnv:
             "recommended_items": unique_actions,
         }
 
-        return np.array(next_state, dtype=np.float32), reward, done, info
+        return np.array(next_state, dtype=np.int64), reward, done, info

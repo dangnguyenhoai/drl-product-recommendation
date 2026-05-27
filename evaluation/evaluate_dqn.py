@@ -166,7 +166,10 @@ def evaluate(args):
         episode_reward = 0
 
         while not done:
-            actions = agent.choose_action(state)
+            actions = agent.choose_action(
+                state,
+                banned_actions=env.recommended_items,
+            )
             next_state, reward, done, info = env.step(actions)
 
             episode_reward += reward

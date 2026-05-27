@@ -223,7 +223,10 @@ def train(args):
         step_count = 0
 
         while not done:
-            action = agent.choose_action(state)
+            action = agent.choose_action(
+                state,
+                banned_actions=env.recommended_items,
+            )
             next_state, reward, done, _ = env.step(action)
 
             agent.remember(

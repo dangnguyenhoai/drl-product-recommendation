@@ -113,27 +113,33 @@ class DQNAgent:
             )
         )
 
-    def choose_action(self, state):
+    def choose_action(self, state, banned_actions=None):
+        available_actions = self.get_available_actions(banned_actions)
+
         if random.random() < self.epsilon:
             return random.sample(
-                self.valid_actions,
+                available_actions,
                 self.top_k,
             )
 
         state = np.array(state, dtype=np.int64)
         state_tensor = torch.LongTensor(state).unsqueeze(0).to(self.device)
 
+        available_actions_tensor = torch.LongTensor(
+            available_actions
+        ).to(self.device)
+
         with torch.no_grad():
             q_values = self.model(state_tensor)[0]
 
-            valid_q_values = q_values[self.valid_actions_tensor]
+            available_q_values = q_values[available_actions_tensor]
 
             top_indices = torch.topk(
-                valid_q_values,
+                available_q_values,
                 k=self.top_k,
             ).indices
 
-            top_actions = self.valid_actions_tensor[top_indices]
+            top_actions = available_actions_tensor[top_indices]
 
         return top_actions.cpu().tolist()
 
@@ -216,3 +222,20 @@ class DQNAgent:
                 self.epsilon = self.epsilon_min
 
         return total_loss / self.batch_size
+    
+    def get_available_actions(self, banned_actions=None):
+        if banned_actions is None:
+            return self.valid_actions
+
+        banned_actions = set(int(action) for action in banned_actions)
+
+        available_actions = [
+            action
+            for action in self.valid_actions
+            if action not in banned_actions
+        ]
+
+        if len(available_actions) < self.top_k:
+            return self.valid_actions
+
+        return available_actions
