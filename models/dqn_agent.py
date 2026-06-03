@@ -98,7 +98,7 @@ class DQNAgent:
             lr=self.learning_rate,
         )
 
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.SmoothL1Loss()
         self.replay_steps = 0
 
     def update_target_network(self):
