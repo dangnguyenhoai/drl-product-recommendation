@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DRL Product Recommendation Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Deep Reinforcement Learning</p>
+          <h1>Product Recommendation Demo</h1>
+        </div>
+        <div class="status-strip" id="statusStrip">
+          <span>Loading demo data...</span>
+        </div>
+      </header>
+
+      <nav class="tabs" aria-label="Demo views">
+        <button class="tab active" data-tab="similar" type="button">
+          Chọn sản phẩm
+        </button>
+        <button class="tab" data-tab="policy" type="button">
+          Demo DQN
+        </button>
+        <button class="tab" data-tab="results" type="button">
+          Kết quả mô hình
+        </button>
+      </nav>
+
+      <main>
+        <section class="panel active" id="panel-similar">
+          <div class="panel-heading">
+            <div>
+              <h2>Chọn 1 sản phẩm và xem gợi ý tương tự</h2>
+              <p>
+                Score kết hợp embedding của DQN, co-occurrence trong history và độ phổ biến.
+              </p>
+            </div>
+            <div class="formula">
+              <span>0.65 Embedding</span>
+              <span>0.25 Co-occurrence</span>
+              <span>0.10 Popularity</span>
+            </div>
+          </div>
+
+          <div class="control-grid">
+            <label class="field">
+              <span>Tìm sản phẩm</span>
+              <input id="productSearch" type="search" placeholder="Nhập tên hoặc item id" />
+            </label>
+            <label class="field">
+              <span>Sản phẩm đang chọn</span>
+              <select id="productSelect"></select>
+            </label>
+          </div>
+
+          <div class="selected-product" id="selectedProduct"></div>
+          <div class="recommendation-table" id="similarTable"></div>
+        </section>
+
+        <section class="panel" id="panel-policy">
+          <div class="panel-heading">
+            <div>
+              <h2>Demo DQN trên thao tác thực tế</h2>
+              <p>
+                State là 5 sản phẩm gần nhất, target là 5 sản phẩm tiếp theo trong lịch sử thật.
+              </p>
+            </div>
+            <div class="formula">
+              <span>Q-value</span>
+              <span>Recent bonus</span>
+              <span>Hit / Miss</span>
+            </div>
+          </div>
+
+          <label class="field case-field">
+            <span>Chọn user/state để demo</span>
+            <select id="caseSelect"></select>
+          </label>
+
+          <div class="metric-grid" id="caseMetrics"></div>
+
+          <div class="flow-grid">
+            <div class="flow-column">
+              <h3>State đầu vào</h3>
+              <div id="stateList" class="item-list"></div>
+            </div>
+            <div class="flow-column">
+              <h3>DQN recommended Top-5</h3>
+              <div id="dqnList" class="item-list"></div>
+            </div>
+            <div class="flow-column">
+              <h3>Target thật</h3>
+              <div id="targetList" class="item-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-results">
+          <div class="panel-heading">
+            <div>
+              <h2>Kết quả metric dùng để chọn mô hình</h2>
+              <p>
+                Bảng này lấy từ evaluation log hiện có trong project.
+              </p>
+            </div>
+            <div class="formula">
+              <span>Average Reward</span>
+              <span>HitRate@5</span>
+            </div>
+          </div>
+
+          <div class="results-layout">
+            <div>
+              <h3>So sánh model / baseline</h3>
+              <div id="metricTable" class="metric-table"></div>
+            </div>
+            <div>
+              <h3>HitRate@5 ranking</h3>
+              <div id="metricBars" class="bar-chart"></div>
+            </div>
+          </div>
+
+          <div class="training-section">
+            <h3>Training reward snapshot</h3>
+            <div id="trainingChart" class="training-chart"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

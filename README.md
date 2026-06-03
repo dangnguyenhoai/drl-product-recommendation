@@ -14,6 +14,36 @@ When training on `train_history.pkl` and evaluating on `test_history.pkl`, keep 
 
 Generated files under `data/processed`, `outputs`, checkpoints, plots, logs, and `.pth` files should not be committed.
 
+## Local Demo App
+
+The demo reads project data from `data/`, writes compact demo JSON to
+`data/demo/demo_data.json`, and serves a local web UI from `demo/`.
+
+```powershell
+python demo/build_demo_data.py
+
+python -m http.server 8000 --bind 127.0.0.1
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/demo/index.html
+```
+
+Demo views:
+
+- `Chọn sản phẩm`: choose one product and show similar recommended products with embedding similarity, co-occurrence, popularity, and final score.
+- `Demo DQN`: choose a user/state case, show the 5 recent items, DQN Top-5 recommendations, real next-5 target items, hits, reward, and HitRate@5.
+- `Kết quả mô hình`: show evaluation metrics from `outputs/logs/test_suite_results.csv`.
+
+By default the demo uses `outputs/checkpoints/dqn_C_boost5.pth`. To rebuild from
+another checkpoint:
+
+```powershell
+python demo/build_demo_data.py --model_path outputs/checkpoints/dqn_C_pure.pth --recent_boost 0
+```
+
 ### 1. Inspect Original Data
 
 ```powershell
