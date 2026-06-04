@@ -1,0 +1,45 @@
+# =========================
+# CORE DATA SCIENCE
+# =========================
+numpy
+pandas
+scikit-learn
+scipy
+
+# =========================
+# VISUALIZATION
+# =========================
+matplotlib
+seaborn
+
+# =========================
+# NOTEBOOK
+# =========================
+jupyter
+ipykernel
+notebook
+
+# =========================
+# RECOMMENDER / UTILITIES
+# =========================
+tqdm
+joblib
+
+# =========================
+# FILE PROCESSING
+# =========================
+openpyxl
+xlsxwriter
+
+# =========================
+# STREAMLIT DEMO
+# =========================
+streamlit
+
+
+
+#cài pytorch riêng vì máy có GPU
+#pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# py -3.12 -m venv myenv
+#myenv\Scripts\activate.bat
+# pip install -r requirements.txt

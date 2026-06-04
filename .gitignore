@@ -1,0 +1,47 @@
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+myenv/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE and OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+
+# Local environment files
+.env
+.env.*
+
+# Model artifacts and generated outputs
+*.pt
+*.pth
+*.pkl
+*.joblib
+*.png
+
+# Project data directories
+data/raw/
+data/processed/
+data/models/
