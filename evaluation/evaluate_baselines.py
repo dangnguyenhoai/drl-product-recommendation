@@ -78,7 +78,7 @@ def evaluate_policy(env, episodes, policy_fn, top_k):
         episode_reward = 0
 
         while not done:
-            actions = policy_fn(state)
+            actions = policy_fn(state, env)
 
             next_state, reward, done, info = env.step(actions)
 
@@ -116,14 +116,37 @@ def main(args):
         top_k=args.top_k,
     )
 
-    def random_policy(_state):
+    def random_policy(_state, env):
+        candidates = [
+            item
+            for item in valid_actions
+            if item not in env.recommended_items
+        ]
+
+        if len(candidates) <= args.top_k:
+            return candidates
+
         return random.sample(
-            valid_actions,
+            candidates,
             args.top_k,
         )
 
-    def popularity_policy(_state):
-        return popular_items
+    def popularity_policy(_state, env):
+        actions = [
+            item
+            for item in popular_items
+            if item not in env.recommended_items
+        ]
+
+        if len(actions) < args.top_k:
+            used = set(actions)
+            actions.extend(
+                item
+                for item in valid_actions
+                if item not in used and item not in env.recommended_items
+            )
+
+        return actions[: args.top_k]
 
     random_reward, random_metrics = evaluate_policy(
         env=random_env,
