@@ -166,8 +166,8 @@ def evaluate(args):
     )
 
     total_rewards = []
-    total_hits = 0
-    total_recommendations = 0
+    total_step_hits = 0
+    total_steps = 0
 
     for episode in range(args.episodes):
         state = env.reset()
@@ -182,8 +182,10 @@ def evaluate(args):
             next_state, reward, done, info = env.step(actions)
 
             episode_reward += reward
-            total_hits += info.get("hits", 0)
-            total_recommendations += len(actions)
+            hits = info.get("hits", 0)
+            if hits > 0:
+                total_step_hits += 1
+            total_steps += 1
 
             state = next_state
 
@@ -196,10 +198,10 @@ def evaluate(args):
 
     average_reward = sum(total_rewards) / len(total_rewards)
 
-    if total_recommendations == 0:
+    if total_steps == 0:
         hit_rate = 0.0
     else:
-        hit_rate = total_hits / total_recommendations
+        hit_rate = total_step_hits / total_steps
 
     print("\n===== Evaluation Results =====")
     print(f"Average Reward: {average_reward:.3f}")

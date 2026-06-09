@@ -100,6 +100,8 @@ class DQNAgent:
 
         self.loss_fn = nn.SmoothL1Loss()
         self.replay_steps = 0
+        self.valid_mask = torch.zeros(self.action_dim, dtype=torch.bool, device=self.device)
+        self.valid_mask[self.valid_actions_tensor] = True
 
     def update_target_network(self):
         self.target_model.load_state_dict(self.model.state_dict())
@@ -172,68 +174,60 @@ class DQNAgent:
         if len(self.memory) < self.batch_size:
             return 0
 
-        batch = random.sample(
-            self.memory,
-            self.batch_size,
+        # Sample a batch of transitions
+        batch = random.sample(self.memory, self.batch_size)
+
+        # Decompose the batch into lists
+        states, actions, rewards, next_states, dones = zip(*batch)
+
+        # Convert to numpy arrays for efficiency
+        states = np.array(states, dtype=np.int64)
+        next_states = np.array(next_states, dtype=np.int64)
+        actions = np.array(actions, dtype=np.int64)
+        rewards = np.array(rewards, dtype=np.float32)
+        dones = np.array(dones, dtype=np.float32)
+
+        # Convert to PyTorch tensors and move to device
+        state_tensor = torch.LongTensor(states).to(self.device)
+        next_state_tensor = torch.LongTensor(next_states).to(self.device)
+        action_tensor = torch.LongTensor(actions).to(self.device)
+        reward_tensor = torch.FloatTensor(rewards).to(self.device)
+        done_tensor = torch.FloatTensor(dones).to(self.device)
+
+        # 1. Compute current Q-values for chosen actions: Q(s, a)
+        q_values = self.model(state_tensor)
+        current_q = q_values.gather(1, action_tensor.unsqueeze(1)).squeeze(1) # shape: [batch_size]
+
+        # 2. Compute target Q-values: r + gamma * max_a' Q_target(s', a')
+        with torch.no_grad():
+            next_q_values = self.target_model(next_state_tensor) # shape: [batch_size, action_dim]
+
+            # Mask out invalid actions
+            masked_next_q_values = next_q_values.clone()
+            masked_next_q_values[:, ~self.valid_mask] = -1e9
+
+            # Standard Q-learning: max over actions
+            max_next_q = masked_next_q_values.max(dim=1).values # shape: [batch_size]
+
+            # Compute target: r + gamma * max_a' Q(s', a') (only if not done)
+            target_q = reward_tensor + self.gamma * max_next_q * (1.0 - done_tensor)
+
+            # Clamp target Q-values for stability
+            target_q = torch.clamp(target_q, min=-10.0, max=10.0)
+
+        # 3. Compute loss
+        loss = self.loss_fn(current_q, target_q)
+
+        # 4. Optimize
+        self.optimizer.zero_grad()
+        loss.backward()
+
+        torch.nn.utils.clip_grad_norm_(
+            self.model.parameters(),
+            max_norm=1.0,
         )
 
-        total_loss = 0
-
-        for state, actions, reward, next_state, done in batch:
-            state = np.array(state, dtype=np.int64)
-            next_state = np.array(next_state, dtype=np.int64)
-
-            state_tensor = torch.LongTensor(state).unsqueeze(0).to(self.device)
-            next_state_tensor = torch.LongTensor(next_state).unsqueeze(0).to(self.device)
-
-            q_values = self.model(state_tensor)[0]
-
-            action_tensor = torch.LongTensor(actions).to(self.device)
-            current_q = q_values[action_tensor].mean()
-
-            if done:
-                target_q = torch.tensor(
-                    reward,
-                    dtype=torch.float32,
-                    device=self.device,
-                )
-            else:
-                with torch.no_grad():
-                    next_q_values = self.target_model(next_state_tensor)[0]
-
-                    valid_next_q_values = next_q_values[self.valid_actions_tensor]
-
-                    top_next_q = torch.topk(
-                        valid_next_q_values,
-                        k=self.top_k,
-                    ).values
-
-                    max_next_q = top_next_q.mean()
-
-                    target_q = reward + self.gamma * max_next_q
-
-                    target_q = torch.clamp(
-                        target_q,
-                        min=-10,
-                        max=10,
-                    )
-
-            loss = self.loss_fn(
-                current_q,
-                target_q,
-            )
-
-            self.optimizer.zero_grad()
-            loss.backward()
-
-            torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(),
-                max_norm=1.0,
-            )
-
-            self.optimizer.step()
-
-            total_loss += loss.item()
+        self.optimizer.step()
 
         self.replay_steps += 1
 
@@ -242,11 +236,10 @@ class DQNAgent:
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-
             if self.epsilon < self.epsilon_min:
                 self.epsilon = self.epsilon_min
 
-        return total_loss / self.batch_size
+        return loss.item()
     
     def get_available_actions(self, banned_actions=None):
         if banned_actions is None:

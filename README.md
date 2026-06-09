@@ -44,6 +44,22 @@ another checkpoint:
 python demo/build_demo_data.py --model_path outputs/checkpoints/dqn_C_pure.pth --recent_boost 0
 ```
 
+The default interactive cases come from `data/processed/test_history.pkl`, so the
+demo may show only the held-out test users. To show more users during the live
+demo while keeping the evaluation metrics on the test split, build cases from
+the full indexed history:
+
+```powershell
+python demo/build_demo_data.py `
+  --case_history_path data/processed/indexed_history.pkl `
+  --max_case_users 1000 `
+  --max_windows_per_user 20 `
+  --max_cases 300
+```
+
+This only changes the interactive case picker. The model comparison table still
+uses `outputs/logs/test_suite_results.csv`.
+
 ### 1. Inspect Original Data
 
 ```powershell

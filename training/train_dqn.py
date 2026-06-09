@@ -226,19 +226,31 @@ def train(args):
         step_count = 0
 
         while not done:
+            # Capture already recommended items before this step to identify hits
+            already_recommended = set(env.recommended_items)
+
             action = agent.choose_action(
                 state,
                 banned_actions=env.recommended_items,
             )
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done, info = env.step(action)
 
-            agent.remember(
-                state,
-                action,
-                reward,
-                next_state,
-                done,
-            )
+            # Decompose the multi-action recommendation into single transitions
+            target_set = set(info.get("target_items", []))
+            for a in action:
+                if a in target_set and a not in already_recommended:
+                    r_i = env.hit_reward
+                    already_recommended.add(a)
+                else:
+                    r_i = env.miss_penalty
+
+                agent.remember(
+                    state,
+                    a,
+                    r_i,
+                    next_state,
+                    done,
+                )
 
             step_count += 1
 

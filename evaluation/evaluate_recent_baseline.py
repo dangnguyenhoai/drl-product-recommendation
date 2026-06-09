@@ -72,8 +72,8 @@ def evaluate_recent_policy(indexed_history, episodes, top_k):
     popular_items = get_popular_items(indexed_history)
 
     total_rewards = []
-    total_hits = 0
-    total_recommendations = 0
+    total_step_hits = 0
+    total_steps = 0
 
     for _ in range(episodes):
         state = env.reset()
@@ -116,8 +116,10 @@ def evaluate_recent_policy(indexed_history, episodes, top_k):
             next_state, reward, done, info = env.step(actions)
 
             episode_reward += reward
-            total_hits += info.get("hits", 0)
-            total_recommendations += len(actions)
+            hits = info.get("hits", 0)
+            if hits > 0:
+                total_step_hits += 1
+            total_steps += 1
 
             state = next_state
 
@@ -126,9 +128,9 @@ def evaluate_recent_policy(indexed_history, episodes, top_k):
     average_reward = sum(total_rewards) / len(total_rewards)
 
     hit_rate = (
-        total_hits / total_recommendations
-        if total_recommendations > 0
-        else 0
+        total_step_hits / total_steps
+        if total_steps > 0
+        else 0.0
     )
 
     print("\n===== Recent-Item Baseline Results =====")

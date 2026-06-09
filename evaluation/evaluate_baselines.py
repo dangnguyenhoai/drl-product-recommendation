@@ -69,8 +69,8 @@ def get_popular_items(indexed_history, top_k):
 
 def evaluate_policy(env, episodes, policy_fn, top_k):
     total_rewards = []
-    total_hits = 0
-    total_recommendations = 0
+    total_step_hits = 0
+    total_steps = 0
 
     for episode in range(episodes):
         state = env.reset()
@@ -83,8 +83,10 @@ def evaluate_policy(env, episodes, policy_fn, top_k):
             next_state, reward, done, info = env.step(actions)
 
             episode_reward += reward
-            total_hits += info.get("hits", 0)
-            total_recommendations += top_k
+            hits = info.get("hits", 0)
+            if hits > 0:
+                total_step_hits += 1
+            total_steps += 1
 
             state = next_state
 
@@ -92,10 +94,10 @@ def evaluate_policy(env, episodes, policy_fn, top_k):
 
     average_reward = sum(total_rewards) / len(total_rewards)
 
-    if total_recommendations == 0:
-        hit_rate = 0
+    if total_steps == 0:
+        hit_rate = 0.0
     else:
-        hit_rate = total_hits / total_recommendations
+        hit_rate = total_step_hits / total_steps
 
     return average_reward, hit_rate
 

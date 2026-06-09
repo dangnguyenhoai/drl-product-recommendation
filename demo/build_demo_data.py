@@ -1,7 +1,6 @@
 import argparse
 import csv
 import json
-import math
 import pickle
 import re
 import sys
@@ -14,6 +13,23 @@ import torch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def resolve_repo_path(path):
+    path = Path(path)
+    if path.is_absolute():
+        return path.resolve()
+    return (REPO_ROOT / path).resolve()
+
+
+def to_repo_relative_path(path):
+    path = resolve_repo_path(path)
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -33,44 +49,99 @@ def parse_args():
     parser.add_argument(
         "--train_history_path",
         type=Path,
-        default=REPO_ROOT / "data" / "processed" / "train_history.pkl",
+        default=Path("data") / "processed" / "train_history.pkl",
     )
     parser.add_argument(
         "--eval_history_path",
         type=Path,
-        default=REPO_ROOT / "data" / "processed" / "test_history.pkl",
+        default=Path("data") / "processed" / "test_history.pkl",
     )
     parser.add_argument(
         "--fallback_history_path",
         type=Path,
-        default=REPO_ROOT / "data" / "processed" / "indexed_history.pkl",
+        default=Path("data") / "processed" / "indexed_history.pkl",
+    )
+    parser.add_argument(
+        "--case_history_path",
+        type=Path,
+        default=None,
+        help=(
+            "Optional history pickle used only for interactive demo cases. "
+            "Evaluation metrics still come from --eval_history_path and --metrics_csv."
+        ),
     )
     parser.add_argument(
         "--model_path",
         type=Path,
-        default=REPO_ROOT / "outputs" / "checkpoints" / "dqn_C_boost5.pth",
+        default=Path("outputs") / "checkpoints" / "dqn_recency5_stable.pth",
     )
     parser.add_argument(
         "--metrics_csv",
         type=Path,
-        default=REPO_ROOT / "outputs" / "logs" / "test_suite_results.csv",
+        default=Path("outputs") / "logs" / "final_test_results.csv",
     )
     parser.add_argument(
         "--training_log",
         type=Path,
-        default=REPO_ROOT / "outputs" / "logs" / "train_dqn_C_boost5.csv",
+        default=Path("outputs") / "logs" / "train_dqn_recency5_stable.csv",
     )
     parser.add_argument(
         "--output_path",
         type=Path,
-        default=REPO_ROOT / "data" / "demo" / "demo_data.json",
+        default=Path("data") / "demo" / "demo_data.json",
     )
     parser.add_argument("--recent_boost", type=float, default=None)
     parser.add_argument("--max_cases", type=int, default=90)
+    parser.add_argument(
+        "--max_case_users",
+        type=int,
+        default=None,
+        help=(
+            "Limit users loaded into the interactive case picker. "
+            "When --case_history_path is set and this is omitted, 500 users are used."
+        ),
+    )
+    parser.add_argument(
+        "--max_windows_per_user",
+        type=int,
+        default=20,
+        help="Maximum state windows sampled per user for the interactive case picker.",
+    )
     parser.add_argument("--similar_top_k", type=int, default=8)
     parser.add_argument("--cooccurrence_window", type=int, default=5)
     parser.add_argument("--skip_product_names", action="store_true")
     return parser.parse_args()
+
+
+def normalize_path_args(args):
+    args.train_history_path = resolve_repo_path(args.train_history_path)
+    args.eval_history_path = resolve_repo_path(args.eval_history_path)
+    args.fallback_history_path = resolve_repo_path(args.fallback_history_path)
+    args.model_path = resolve_repo_path(args.model_path)
+    args.metrics_csv = resolve_repo_path(args.metrics_csv)
+    args.training_log = resolve_repo_path(args.training_log)
+    args.output_path = resolve_repo_path(args.output_path)
+
+    if args.case_history_path is not None:
+        args.case_history_path = resolve_repo_path(args.case_history_path)
+
+
+def require_file(path, label):
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{label} not found: {path}"
+        )
+
+
+def validate_required_files(args):
+    require_file(args.train_history_path, "Train history file")
+    require_file(args.eval_history_path, "Evaluation history file")
+    require_file(args.model_path, "DQN model checkpoint")
+    require_file(args.metrics_csv, "Metrics CSV")
+    require_file(args.training_log, "Training log CSV")
+
+    if args.case_history_path is not None:
+        require_file(args.case_history_path, "Case history file")
 
 
 def load_history(path):
@@ -99,6 +170,20 @@ def pick_histories(args):
     return train_history, eval_history
 
 
+def limit_history_users(history, max_users):
+    if max_users is None or max_users <= 0:
+        return history
+
+    eligible = [
+        (user_id, user_history)
+        for user_id, user_history in history.items()
+        if len(user_history) >= STATE_SIZE + TOP_K
+    ]
+    eligible.sort(key=lambda item: len(item[1]), reverse=True)
+
+    return dict(eligible[:max_users])
+
+
 def flatten_items(histories):
     for history in histories.values():
         for item in history:
@@ -123,7 +208,7 @@ def infer_recent_boost(model_path, recent_boost):
 def load_dqn(model_path, state_size):
     if not model_path.exists():
         return None, {
-            "path": str(model_path.relative_to(REPO_ROOT)),
+            "path": to_repo_relative_path(model_path),
             "available": False,
             "reason": "checkpoint not found",
         }
@@ -131,13 +216,19 @@ def load_dqn(model_path, state_size):
     state_dict = torch.load(model_path, map_location="cpu")
     if "item_embedding.weight" not in state_dict:
         return None, {
-            "path": str(model_path.relative_to(REPO_ROOT)),
+            "path": to_repo_relative_path(model_path),
             "available": False,
             "reason": "checkpoint does not contain item_embedding.weight",
         }
 
     action_dim, embedding_dim = state_dict["item_embedding.weight"].shape
-    hidden_dim = state_dict["q_network.0.bias"].shape[0]
+    
+    if "value_stream.0.weight" in state_dict:
+        hidden_dim = state_dict["value_stream.0.weight"].shape[1]
+    elif "q_network.0.bias" in state_dict:
+        hidden_dim = state_dict["q_network.0.bias"].shape[0]
+    else:
+        hidden_dim = 128 # Default fallback
 
     model = DQN(
         state_dim=state_size,
@@ -149,7 +240,7 @@ def load_dqn(model_path, state_size):
     model.eval()
 
     return model, {
-        "path": str(model_path.relative_to(REPO_ROOT)),
+        "path": to_repo_relative_path(model_path),
         "available": True,
         "action_dim": int(action_dim),
         "embedding_dim": int(embedding_dim),
@@ -362,24 +453,30 @@ def build_similar_items(
 
 
 def build_cases(
-    eval_history,
+    case_history,
     valid_actions,
     lookup,
     popularity,
     model,
     recent_boost,
     max_cases,
+    max_windows_per_user,
 ):
     rows = []
     valid_set = set(valid_actions)
 
-    for user_id, history in eval_history.items():
+    for user_id, history in case_history.items():
         if len(history) < STATE_SIZE + TOP_K:
             continue
 
         max_pointer = len(history) - STATE_SIZE - TOP_K
-        for pointer in range(max_pointer + 1):
+        pointers = sample_pointers(max_pointer, max_windows_per_user)
+
+        for pointer in pointers:
             state = [int(item) for item in history[pointer : pointer + STATE_SIZE]]
+            if any(item not in valid_set for item in state):
+                continue
+
             target = [
                 int(item)
                 for item in history[pointer + STATE_SIZE : pointer + STATE_SIZE + TOP_K]
@@ -434,6 +531,30 @@ def build_cases(
                 }
             )
 
+    return select_diverse_cases(rows, max_cases)
+
+
+def sample_pointers(max_pointer, max_windows_per_user):
+    total_windows = max_pointer + 1
+
+    if max_windows_per_user is None or max_windows_per_user <= 0:
+        return range(total_windows)
+
+    if total_windows <= max_windows_per_user:
+        return range(total_windows)
+
+    if max_windows_per_user == 1:
+        return [0]
+
+    return sorted(
+        {
+            round(idx * max_pointer / (max_windows_per_user - 1))
+            for idx in range(max_windows_per_user)
+        }
+    )
+
+
+def select_diverse_cases(rows, max_cases):
     rows.sort(
         key=lambda row: (
             row["hits"],
@@ -443,7 +564,34 @@ def build_cases(
         reverse=True,
     )
 
-    return rows[:max_cases]
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[row["user_id"]].append(row)
+
+    user_order = sorted(
+        grouped,
+        key=lambda user_id: (
+            grouped[user_id][0]["hits"],
+            grouped[user_id][0]["reward"],
+        ),
+        reverse=True,
+    )
+
+    selected = []
+    while len(selected) < max_cases:
+        added = False
+        for user_id in user_order:
+            if grouped[user_id]:
+                selected.append(grouped[user_id].pop(0))
+                added = True
+
+                if len(selected) >= max_cases:
+                    break
+
+        if not added:
+            break
+
+    return selected
 
 
 def read_metrics(metrics_csv):
@@ -473,7 +621,7 @@ def read_metrics(metrics_csv):
         reverse=True,
     )
     return {
-        "source": str(metrics_csv.relative_to(REPO_ROOT)),
+        "source": to_repo_relative_path(metrics_csv),
         "rows": rows,
     }
 
@@ -513,15 +661,21 @@ def read_training_log(training_log):
                 continue
 
     return {
-        "source": str(training_log.relative_to(REPO_ROOT)),
+        "source": to_repo_relative_path(training_log),
         "points": downsample(points),
         "last": points[-1] if points else None,
     }
 
 
 def dataset_stats(name, history):
-    lengths = [len(items) for items in history.values()]
-    all_items = list(flatten_items(history))
+    lengths = []
+    unique_items = set()
+    interactions = 0
+
+    for items in history.values():
+        lengths.append(len(items))
+        interactions += len(items)
+        unique_items.update(items)
 
     if not lengths:
         return {
@@ -537,8 +691,8 @@ def dataset_stats(name, history):
     return {
         "name": name,
         "users": len(history),
-        "interactions": len(all_items),
-        "unique_items": len(set(all_items)),
+        "interactions": interactions,
+        "unique_items": len(unique_items),
         "min_history_len": min(lengths),
         "max_history_len": max(lengths),
         "avg_history_len": round(sum(lengths) / len(lengths), 2),
@@ -547,6 +701,9 @@ def dataset_stats(name, history):
 
 def main():
     args = parse_args()
+    normalize_path_args(args)
+    validate_required_files(args)
+
     train_history, eval_history = pick_histories(args)
     model, model_meta = load_dqn(args.model_path, STATE_SIZE)
 
@@ -556,10 +713,25 @@ def main():
     union_history = dict(train_history)
     union_history.update({f"eval-{user}": history for user, history in eval_history.items()})
 
+    if args.case_history_path is not None:
+        case_history = load_history(args.case_history_path)
+        case_history_name = args.case_history_path.stem
+        case_max_users = args.max_case_users if args.max_case_users is not None else 500
+    else:
+        case_history = eval_history
+        case_history_name = "test_history"
+        case_max_users = args.max_case_users
+
+    case_history = limit_history_users(case_history, case_max_users)
+
     valid_actions = get_valid_actions(union_history, action_dim)
     eval_valid_actions = get_valid_actions(eval_history, action_dim)
     if not eval_valid_actions:
         eval_valid_actions = valid_actions
+
+    case_valid_actions = get_valid_actions(case_history, action_dim)
+    if not case_valid_actions:
+        case_valid_actions = eval_valid_actions
 
     popularity = Counter(flatten_items(union_history))
     product_lookup = build_product_lookup(
@@ -583,13 +755,14 @@ def main():
     )
 
     cases = build_cases(
-        eval_history=eval_history,
-        valid_actions=eval_valid_actions,
+        case_history=case_history,
+        valid_actions=case_valid_actions,
         lookup=product_lookup,
         popularity=popularity,
         model=model,
         recent_boost=recent_boost,
         max_cases=args.max_cases,
+        max_windows_per_user=args.max_windows_per_user,
     )
 
     product_options = [
@@ -600,6 +773,9 @@ def main():
 
     metrics = read_metrics(args.metrics_csv)
     training = read_training_log(args.training_log)
+    full_history = load_history(args.fallback_history_path)
+    full_stats = dataset_stats("indexed_history", full_history) if full_history else None
+    del full_history
 
     payload = {
         "meta": {
@@ -613,13 +789,17 @@ def main():
             "notes": [
                 "DQN action score = raw Q-value + recent-item bonus.",
                 "Product similarity score = 0.65 embedding similarity + 0.25 co-occurrence + 0.10 popularity.",
+                "Evaluation metrics are computed on the test split; interactive cases can use another history file for demo breadth.",
             ],
         },
         "dataset": {
+            "full": full_stats,
             "train": dataset_stats("train_history", train_history),
             "eval": dataset_stats("test_history", eval_history),
+            "case": dataset_stats(case_history_name, case_history),
             "valid_actions": len(valid_actions),
             "eval_valid_actions": len(eval_valid_actions),
+            "case_valid_actions": len(case_valid_actions),
         },
         "items": {
             str(item): item_detail(item, product_lookup, popularity)
@@ -636,7 +816,7 @@ def main():
     with open(args.output_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False)
 
-    rel_output = args.output_path.relative_to(REPO_ROOT)
+    rel_output = to_repo_relative_path(args.output_path)
     print(f"Saved demo data: {rel_output}")
     print(f"Products: {len(product_options)}")
     print(f"Cases: {len(cases)}")

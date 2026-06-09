@@ -47,13 +47,24 @@ function renderStatus() {
   const dataset = demoData.dataset;
   const model = meta.model;
 
-  els.statusStrip.innerHTML = [
-    `${dataset.eval.users} eval users`,
-    `${dataset.eval.interactions} eval interactions`,
+  const statusItems = [];
+  if (dataset.full?.users) {
+    statusItems.push(`${formatNumber.format(dataset.full.users)} full users`);
+  }
+
+  const demoCaseUsers = new Set((demoData.cases || []).map((row) => row.user_id)).size;
+
+  statusItems.push(
+    `${formatNumber.format(dataset.eval.users)} test users`,
+    `${formatNumber.format(demoCaseUsers)} demo case users`,
+    `${formatNumber.format(demoData.cases?.length || 0)} demo cases`,
+    `${formatNumber.format(dataset.eval.interactions)} test interactions`,
     `${dataset.valid_actions} valid actions`,
     `Top-${meta.top_k}`,
     model.available ? `Model action_dim ${model.action_dim}` : "No DQN checkpoint",
-  ]
+  );
+
+  els.statusStrip.innerHTML = statusItems
     .map((text) => `<span>${escapeHtml(text)}</span>`)
     .join("");
 }
