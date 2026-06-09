@@ -13,23 +13,6 @@ import torch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def resolve_repo_path(path):
-    path = Path(path)
-    if path.is_absolute():
-        return path.resolve()
-    return (REPO_ROOT / path).resolve()
-
-
-def to_repo_relative_path(path):
-    path = resolve_repo_path(path)
-    try:
-        return str(path.relative_to(REPO_ROOT))
-    except ValueError:
-        return str(path)
-
-
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -42,6 +25,45 @@ HIT_REWARD = 5.0
 MISS_PENALTY = -2.0
 
 
+def resolve_repo_path(path):
+    """Resolve relative paths against the repository root.
+
+    This keeps the demo builder stable on Windows, where mixing relative
+    paths with REPO_ROOT.relative_to(...) raises ValueError.
+    """
+    path = Path(path)
+
+    if path.is_absolute():
+        return path.resolve()
+
+    return (REPO_ROOT / path).resolve()
+
+
+def to_repo_relative_path(path):
+    """Return a repo-relative path when possible, otherwise an absolute path."""
+    path = resolve_repo_path(path)
+
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def normalize_args_paths(args):
+    args.train_history_path = resolve_repo_path(args.train_history_path)
+    args.eval_history_path = resolve_repo_path(args.eval_history_path)
+    args.fallback_history_path = resolve_repo_path(args.fallback_history_path)
+    args.model_path = resolve_repo_path(args.model_path)
+    args.metrics_csv = resolve_repo_path(args.metrics_csv)
+    args.training_log = resolve_repo_path(args.training_log)
+    args.output_path = resolve_repo_path(args.output_path)
+
+    if args.case_history_path is not None:
+        args.case_history_path = resolve_repo_path(args.case_history_path)
+
+    return args
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Build compact JSON data for the local recommendation demo.",
@@ -49,17 +71,17 @@ def parse_args():
     parser.add_argument(
         "--train_history_path",
         type=Path,
-        default=Path("data") / "processed" / "train_history.pkl",
+        default=REPO_ROOT / "data" / "processed" / "train_history.pkl",
     )
     parser.add_argument(
         "--eval_history_path",
         type=Path,
-        default=Path("data") / "processed" / "test_history.pkl",
+        default=REPO_ROOT / "data" / "processed" / "test_history.pkl",
     )
     parser.add_argument(
         "--fallback_history_path",
         type=Path,
-        default=Path("data") / "processed" / "indexed_history.pkl",
+        default=REPO_ROOT / "data" / "processed" / "indexed_history.pkl",
     )
     parser.add_argument(
         "--case_history_path",
@@ -73,22 +95,22 @@ def parse_args():
     parser.add_argument(
         "--model_path",
         type=Path,
-        default=Path("outputs") / "checkpoints" / "dqn_recency5_stable.pth",
+        default=REPO_ROOT / "outputs" / "checkpoints" / "dqn_recency5_stable.pth",
     )
     parser.add_argument(
         "--metrics_csv",
         type=Path,
-        default=Path("outputs") / "logs" / "final_test_results.csv",
+        default=REPO_ROOT / "outputs" / "logs" / "final_test_results.csv",
     )
     parser.add_argument(
         "--training_log",
         type=Path,
-        default=Path("outputs") / "logs" / "train_dqn_recency5_stable.csv",
+        default=REPO_ROOT / "outputs" / "logs" / "train_dqn_recency5_stable.csv",
     )
     parser.add_argument(
         "--output_path",
         type=Path,
-        default=Path("data") / "demo" / "demo_data.json",
+        default=REPO_ROOT / "data" / "demo" / "demo_data.json",
     )
     parser.add_argument("--recent_boost", type=float, default=None)
     parser.add_argument("--max_cases", type=int, default=90)
@@ -111,37 +133,6 @@ def parse_args():
     parser.add_argument("--cooccurrence_window", type=int, default=5)
     parser.add_argument("--skip_product_names", action="store_true")
     return parser.parse_args()
-
-
-def normalize_path_args(args):
-    args.train_history_path = resolve_repo_path(args.train_history_path)
-    args.eval_history_path = resolve_repo_path(args.eval_history_path)
-    args.fallback_history_path = resolve_repo_path(args.fallback_history_path)
-    args.model_path = resolve_repo_path(args.model_path)
-    args.metrics_csv = resolve_repo_path(args.metrics_csv)
-    args.training_log = resolve_repo_path(args.training_log)
-    args.output_path = resolve_repo_path(args.output_path)
-
-    if args.case_history_path is not None:
-        args.case_history_path = resolve_repo_path(args.case_history_path)
-
-
-def require_file(path, label):
-    if not path.exists():
-        raise FileNotFoundError(
-            f"{label} not found: {path}"
-        )
-
-
-def validate_required_files(args):
-    require_file(args.train_history_path, "Train history file")
-    require_file(args.eval_history_path, "Evaluation history file")
-    require_file(args.model_path, "DQN model checkpoint")
-    require_file(args.metrics_csv, "Metrics CSV")
-    require_file(args.training_log, "Training log CSV")
-
-    if args.case_history_path is not None:
-        require_file(args.case_history_path, "Case history file")
 
 
 def load_history(path):
@@ -222,13 +213,7 @@ def load_dqn(model_path, state_size):
         }
 
     action_dim, embedding_dim = state_dict["item_embedding.weight"].shape
-    
-    if "value_stream.0.weight" in state_dict:
-        hidden_dim = state_dict["value_stream.0.weight"].shape[1]
-    elif "q_network.0.bias" in state_dict:
-        hidden_dim = state_dict["q_network.0.bias"].shape[0]
-    else:
-        hidden_dim = 128 # Default fallback
+    hidden_dim = state_dict["q_network.0.bias"].shape[0]
 
     model = DQN(
         state_dim=state_size,
@@ -707,10 +692,7 @@ def dataset_stats(name, history):
 
 
 def main():
-    args = parse_args()
-    normalize_path_args(args)
-    validate_required_files(args)
-
+    args = normalize_args_paths(parse_args())
     train_history, eval_history = pick_histories(args)
     model, model_meta = load_dqn(args.model_path, STATE_SIZE)
 
