@@ -4,6 +4,7 @@ import pickle
 from collections import Counter
 
 from env.recommendation_env import RecommendationEnv
+from evaluation.metrics import TopKMetrics, print_top_k_metrics
 
 
 def parse_args():
@@ -72,8 +73,7 @@ def evaluate_recent_policy(indexed_history, episodes, top_k):
     popular_items = get_popular_items(indexed_history)
 
     total_rewards = []
-    total_step_hits = 0
-    total_steps = 0
+    metrics_tracker = TopKMetrics(top_k)
 
     for _ in range(episodes):
         state = env.reset()
@@ -116,10 +116,10 @@ def evaluate_recent_policy(indexed_history, episodes, top_k):
             next_state, reward, done, info = env.step(actions)
 
             episode_reward += reward
-            hits = info.get("hits", 0)
-            if hits > 0:
-                total_step_hits += 1
-            total_steps += 1
+            metrics_tracker.update(
+                info.get("recommended_items", actions),
+                info.get("target_items", []),
+            )
 
             state = next_state
 
@@ -127,15 +127,11 @@ def evaluate_recent_policy(indexed_history, episodes, top_k):
 
     average_reward = sum(total_rewards) / len(total_rewards)
 
-    hit_rate = (
-        total_step_hits / total_steps
-        if total_steps > 0
-        else 0.0
-    )
+    metrics = metrics_tracker.as_dict()
 
     print("\n===== Recent-Item Baseline Results =====")
     print(f"Average Reward: {average_reward:.3f}")
-    print(f"Hit Rate@{top_k}: {hit_rate:.4f}")
+    print_top_k_metrics(metrics, top_k)
 
 
 if __name__ == "__main__":
