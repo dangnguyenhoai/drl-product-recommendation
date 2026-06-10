@@ -73,7 +73,7 @@ def parse_args():
     parser.add_argument(
         "--model_path",
         type=Path,
-        default=Path("outputs") / "checkpoints" / "dqn_recency5_stable.pth",
+        default=Path("outputs") / "checkpoints" / "dqn_recency5_stable_best.pth",
     )
     parser.add_argument(
         "--metrics_csv",

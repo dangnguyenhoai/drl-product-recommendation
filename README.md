@@ -159,3 +159,64 @@ python -m evaluation.inspect_policy `
   --embedding_dim 32 `
   --hidden_dim 128
 ```
+
+### 9. Compare MLP And DQN On The Same Test Windows
+
+Train the MLP first so its best validation checkpoint is saved:
+
+```powershell
+python -m baseline.baseline_train --action-dim 1000
+```
+
+Then load both model checkpoints into one evaluator. This reports both
+immediate-next-item metrics and next-5-window metrics using exactly the same
+test states, targets, valid actions, and formulas for both models:
+
+```powershell
+python -m evaluation.evaluate_models_common `
+  --data-path data/processed/test_history.pkl `
+  --mlp-model-path outputs/checkpoints/mlp_history_baseline.pth `
+  --dqn-model-path outputs/checkpoints/dqn_pure_stable.pth `
+  --state-size 5 `
+  --top-k 5
+```
+
+Both checkpoints must use the same `action_dim` (`1000` for the current
+train/validation/test data). To compare a DQN checkpoint trained with a recency
+prior, pass its matching value with `--recent-boost`.
+
+Results are saved to:
+
+- `outputs/logs/common_model_comparison.csv`
+- `outputs/logs/common_model_comparison.md`
+
+### 10. Run The Standalone MLP Baseline Notebook
+
+Open and run:
+
+```text
+notebooks/mlp_baseline_common_eval.ipynb
+```
+
+The notebook trains the supervised history MLP on the temporal train split,
+selects its best checkpoint on validation, and evaluates it on deterministic
+test windows using the same valid-action mask, reward, and metric formulas as
+`evaluation.evaluate_models_common`.
+
+Set `QUICK_RUN = True` in the notebook for a small pipeline smoke test. Keep
+`QUICK_RUN = False` for the full experiment.
+
+To evaluate an existing MLP checkpoint without requiring a DQN checkpoint:
+
+```powershell
+python -m evaluation.evaluate_mlp_common `
+  --data-path data/processed/test_history.pkl `
+  --model-path outputs/checkpoints/mlp_common_baseline.pth `
+  --state-size 5 `
+  --top-k 5
+```
+
+Results are saved to:
+
+- `outputs/logs/mlp_common_test_results.csv`
+- `outputs/logs/mlp_common_test_report.md`

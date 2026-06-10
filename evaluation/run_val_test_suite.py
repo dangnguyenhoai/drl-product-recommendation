@@ -77,21 +77,21 @@ def parse_args():
     parser.add_argument(
         "--pure_model",
         type=str,
-        default="dqn_pure_stable.pth",
+        default="dqn_pure_stable_best.pth",
         help="Checkpoint filename for pure DQN",
     )
 
     parser.add_argument(
         "--boost2_model",
         type=str,
-        default="dqn_recency2_stable.pth",
+        default="dqn_recency2_stable_best.pth",
         help="Checkpoint filename for DQN with recent_boost=2",
     )
 
     parser.add_argument(
         "--boost5_model",
         type=str,
-        default="dqn_recency5_stable.pth",
+        default="dqn_recency5_stable_best.pth",
         help="Checkpoint filename for DQN with recent_boost=5",
     )
 
