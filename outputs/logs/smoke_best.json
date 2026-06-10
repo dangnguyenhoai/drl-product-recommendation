@@ -1,0 +1,13 @@
+{
+  "best_episode": 1,
+  "best_reward": -13.0,
+  "model_path": "outputs/checkpoints/smoke_best.pth",
+  "last_model_path": "outputs/checkpoints/smoke_last.pth",
+  "data_path": "data/processed/train_history.pkl",
+  "episodes": 2,
+  "action_dim": 1000,
+  "embedding_dim": 32,
+  "hidden_dim": 128,
+  "recent_boost": 0.0,
+  "selection_metric": "episode_reward"
+}

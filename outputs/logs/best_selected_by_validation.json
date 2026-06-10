@@ -1,0 +1,15 @@
+{
+  "selection_metric": "validation_hit_rate_at_5",
+  "selected_method": "DQN + recency prior boost=5",
+  "source_model_path": "outputs/checkpoints/dqn_recency5_stable_best.pth",
+  "selected_model_path": "outputs/checkpoints/best_selected_by_validation.pth",
+  "split": "validation",
+  "average_reward": -3.992,
+  "hit_rate_at_5": 0.1462,
+  "precision_at_5": 0.0394,
+  "recall_at_5": 0.0404,
+  "ndcg_at_5": 0.0477,
+  "episodes": 1000,
+  "recent_boost": 5.0,
+  "type": "dqn"
+}

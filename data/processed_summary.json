@@ -1,0 +1,206 @@
+{
+  "indexed_history.pkl": {
+    "num_users": 197227,
+    "total_actions": 18215667,
+    "avg_actions_per_user": 92.35889102404843,
+    "median_actions_per_user": 46.0,
+    "min_actions_per_user": 5,
+    "max_actions_per_user": 2282,
+    "num_unique_items": 1000,
+    "top_items": [
+      [
+        0,
+        490836
+      ],
+      [
+        1,
+        394463
+      ],
+      [
+        2,
+        275401
+      ],
+      [
+        3,
+        251533
+      ],
+      [
+        4,
+        220825
+      ],
+      [
+        5,
+        184137
+      ],
+      [
+        6,
+        160716
+      ],
+      [
+        7,
+        149209
+      ],
+      [
+        8,
+        146574
+      ],
+      [
+        9,
+        142761
+      ]
+    ]
+  },
+  "test_history.pkl": {
+    "num_users": 71752,
+    "total_actions": 2200411,
+    "avg_actions_per_user": 30.666894302597836,
+    "median_actions_per_user": 22.0,
+    "min_actions_per_user": 11,
+    "max_actions_per_user": 343,
+    "num_unique_items": 1000,
+    "top_items": [
+      [
+        0,
+        52926
+      ],
+      [
+        1,
+        52360
+      ],
+      [
+        2,
+        35986
+      ],
+      [
+        3,
+        30534
+      ],
+      [
+        4,
+        25996
+      ],
+      [
+        6,
+        22492
+      ],
+      [
+        10,
+        21295
+      ],
+      [
+        5,
+        20691
+      ],
+      [
+        8,
+        18176
+      ],
+      [
+        9,
+        17618
+      ]
+    ]
+  },
+  "train_history.pkl": {
+    "num_users": 71752,
+    "total_actions": 10076939,
+    "avg_actions_per_user": 140.4412281190768,
+    "median_actions_per_user": 100.0,
+    "min_actions_per_user": 49,
+    "max_actions_per_user": 1597,
+    "num_unique_items": 1000,
+    "top_items": [
+      [
+        0,
+        270706
+      ],
+      [
+        1,
+        211258
+      ],
+      [
+        2,
+        169036
+      ],
+      [
+        3,
+        145130
+      ],
+      [
+        4,
+        136739
+      ],
+      [
+        5,
+        106177
+      ],
+      [
+        9,
+        86129
+      ],
+      [
+        8,
+        84021
+      ],
+      [
+        6,
+        82334
+      ],
+      [
+        10,
+        80227
+      ]
+    ]
+  },
+  "val_history.pkl": {
+    "num_users": 71752,
+    "total_actions": 2166570,
+    "avg_actions_per_user": 30.19525588136916,
+    "median_actions_per_user": 21.0,
+    "min_actions_per_user": 11,
+    "max_actions_per_user": 342,
+    "num_unique_items": 1000,
+    "top_items": [
+      [
+        0,
+        55348
+      ],
+      [
+        1,
+        53046
+      ],
+      [
+        3,
+        30102
+      ],
+      [
+        4,
+        27928
+      ],
+      [
+        2,
+        27518
+      ],
+      [
+        6,
+        21509
+      ],
+      [
+        10,
+        21169
+      ],
+      [
+        5,
+        21113
+      ],
+      [
+        7,
+        18378
+      ],
+      [
+        9,
+        18213
+      ]
+    ]
+  }
+}

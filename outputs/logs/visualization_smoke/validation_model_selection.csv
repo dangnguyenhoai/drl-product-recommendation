@@ -1,0 +1,4 @@
+split,method,average_reward,hit_rate_at_5,precision_at_5,recall_at_5,ndcg_at_5,episodes,model_path,recent_boost,type
+validation,DQN pure stable,-0.5,0.25,0.05,0.05,0.0328,2,outputs\checkpoints\dqn_pure_stable.pth,0.0,dqn
+validation,DQN + recency prior boost=2,4.0,0.6667,0.1333,0.1333,0.1131,2,outputs\checkpoints\dqn_recency2_stable.pth,2.0,dqn
+validation,DQN + recency prior boost=5,-9.5,0.0769,0.0154,0.0154,0.013,2,outputs\checkpoints\dqn_recency5_stable.pth,5.0,dqn

@@ -1,0 +1,13 @@
+{
+  "best_episode": 6798,
+  "best_reward": 23.0,
+  "model_path": "outputs/checkpoints/dqn_recency5_stable_best.pth",
+  "last_model_path": "outputs/checkpoints/dqn_recency5_stable.pth",
+  "data_path": "data/processed/train_history.pkl",
+  "episodes": 10000,
+  "action_dim": 1000,
+  "embedding_dim": 32,
+  "hidden_dim": 128,
+  "recent_boost": 5.0,
+  "selection_metric": "episode_reward"
+}

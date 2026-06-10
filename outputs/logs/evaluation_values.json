@@ -1,0 +1,116 @@
+{
+  "generated_at": "2026-06-10T02:58:50",
+  "metrics_csv": "outputs/logs/final_test_results.csv",
+  "selected_by_validation": {
+    "split": "validation",
+    "method": "DQN + recency prior boost=5",
+    "average_reward": -3.992,
+    "hit_rate_at_5": 0.1462,
+    "precision_at_5": 0.0394,
+    "recall_at_5": 0.0404,
+    "ndcg_at_5": 0.0477,
+    "episodes": 1000,
+    "model_path": "outputs/checkpoints/dqn_recency5_stable_best.pth",
+    "recent_boost": 5.0,
+    "type": "dqn"
+  },
+  "final_test_results": [
+    {
+      "split": "test",
+      "method": "Recent-item baseline",
+      "average_reward": -1.221,
+      "hit_rate_at_5": 0.2059,
+      "precision_at_5": 0.0522,
+      "recall_at_5": 0.0538,
+      "ndcg_at_5": 0.0564,
+      "episodes": 1000,
+      "model_path": NaN,
+      "recent_boost": NaN,
+      "type": "baseline"
+    },
+    {
+      "split": "test",
+      "method": "Popularity baseline",
+      "average_reward": -4.365,
+      "hit_rate_at_5": 0.1668,
+      "precision_at_5": 0.0364,
+      "recall_at_5": 0.0373,
+      "ndcg_at_5": 0.0387,
+      "episodes": 1000,
+      "model_path": NaN,
+      "recent_boost": NaN,
+      "type": "baseline"
+    },
+    {
+      "split": "test",
+      "method": "DQN + recency prior boost=5 (selected by validation)",
+      "average_reward": -4.511,
+      "hit_rate_at_5": 0.1456,
+      "precision_at_5": 0.0373,
+      "recall_at_5": 0.0384,
+      "ndcg_at_5": 0.0459,
+      "episodes": 1000,
+      "model_path": "outputs/checkpoints/dqn_recency5_stable_best.pth",
+      "recent_boost": 5.0,
+      "type": "dqn"
+    },
+    {
+      "split": "test",
+      "method": "Random baseline",
+      "average_reward": -10.649,
+      "hit_rate_at_5": 0.0252,
+      "precision_at_5": 0.0051,
+      "recall_at_5": 0.0052,
+      "ndcg_at_5": 0.0054,
+      "episodes": 1000,
+      "model_path": NaN,
+      "recent_boost": NaN,
+      "type": "baseline"
+    }
+  ],
+  "validation_model_selection": [
+    {
+      "split": "validation",
+      "method": "DQN + recency prior boost=5",
+      "average_reward": -3.992,
+      "hit_rate_at_5": 0.1462,
+      "precision_at_5": 0.0394,
+      "recall_at_5": 0.0404,
+      "ndcg_at_5": 0.0477,
+      "episodes": 1000,
+      "model_path": "outputs/checkpoints/dqn_recency5_stable_best.pth",
+      "recent_boost": 5.0,
+      "type": "dqn"
+    },
+    {
+      "split": "validation",
+      "method": "DQN + recency prior boost=2",
+      "average_reward": -4.325,
+      "hit_rate_at_5": 0.1416,
+      "precision_at_5": 0.0384,
+      "recall_at_5": 0.0394,
+      "ndcg_at_5": 0.0465,
+      "episodes": 1000,
+      "model_path": "outputs/checkpoints/dqn_recency2_stable_best.pth",
+      "recent_boost": 2.0,
+      "type": "dqn"
+    },
+    {
+      "split": "validation",
+      "method": "DQN pure stable",
+      "average_reward": -8.585,
+      "hit_rate_at_5": 0.0624,
+      "precision_at_5": 0.0127,
+      "recall_at_5": 0.0131,
+      "ndcg_at_5": 0.0129,
+      "episodes": 1000,
+      "model_path": "outputs/checkpoints/dqn_pure_stable_best.pth",
+      "recent_boost": 0.0,
+      "type": "dqn"
+    }
+  ],
+  "plots": [
+    "outputs/plots/recommendation_metrics.png",
+    "outputs/plots/dqn_training.png"
+  ]
+}

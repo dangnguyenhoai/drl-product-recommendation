@@ -11,17 +11,6 @@ venv/
 # Jupyter Notebook
 .ipynb_checkpoints/
 
-# Logs
-*.log
-
-
-datasets/
-data/
-outputs/
-*.pt
-*.pth
-*.ckpt
-
 # OS
 .DS_Store
 Thumbs.db

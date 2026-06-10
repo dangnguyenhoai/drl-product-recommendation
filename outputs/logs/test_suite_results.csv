@@ -1,0 +1,7 @@
+method,average_reward,hit_rate_at_5,episodes,model_path,recent_boost,type
+Random baseline,-6.09,0.079,300,,,baseline
+Popularity baseline,-5.13,0.0994,300,,,baseline
+Recent-item baseline,1.863,0.2828,300,,,baseline
+DQN C pure,-6.097,0.0904,300,outputs\checkpoints\dqn_C_pure.pth,0.0,dqn
+DQN C + recent_boost=2,0.497,0.2443,300,outputs\checkpoints\dqn_C_boost2.pth,2.0,dqn
+DQN C + recent_boost=5,-1.633,0.2017,300,outputs\checkpoints\dqn_C_boost5.pth,5.0,dqn

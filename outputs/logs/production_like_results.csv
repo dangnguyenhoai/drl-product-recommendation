@@ -1,0 +1,6 @@
+method,average_reward,hit_rate_at_5,eval_episodes,train_episodes,lr,gamma,batch_size,memory_size,target_update_freq,embedding_dim,hidden_dim,recent_boost
+Random baseline,-10.803,0.0054,1000,,,,,,,,,
+Popularity baseline,-9.26,0.0137,1000,,,,,,,,,
+Recent-item baseline,-0.251,0.0582,1000,,,,,,,,,
+DQN pure stable,-10.79,0.0055,1000,5000.0,0.0001,0.9,64.0,50000.0,200.0,32.0,128.0,0.0
+DQN + recency prior stable,-4.785,0.0357,1000,5000.0,0.0001,0.9,64.0,50000.0,200.0,32.0,128.0,5.0
