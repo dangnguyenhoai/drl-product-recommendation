@@ -5,6 +5,7 @@ import gc
 import math
 import pickle
 import random
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -85,6 +86,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patience", type=int, default=5)
     parser.add_argument("--min-delta", type=float, default=1e-5)
     parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument(
+        "--log-every-batches",
+        type=int,
+        default=1000,
+        help="Print in-epoch training progress every N batches. Use 0 to disable.",
+    )
     parser.add_argument("--seed", type=int, default=42)
 
     parser.add_argument(
@@ -141,6 +148,8 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--patience must be positive.")
     if args.num_workers < 0:
         raise ValueError("--num-workers cannot be negative.")
+    if args.log_every_batches < 0:
+        raise ValueError("--log-every-batches cannot be negative.")
     if args.max_train_samples is not None and args.max_train_samples <= 0:
         raise ValueError("--max-train-samples must be positive when provided.")
     if args.max_eval_samples is not None and args.max_eval_samples <= 0:
@@ -412,13 +421,16 @@ def train_one_epoch(
     criterion: nn.Module,
     optimizer: torch.optim.Optimizer,
     device: torch.device,
+    log_every_batches: int = 0,
 ) -> float:
     model.train()
 
     total_loss = 0.0
     total_rows = 0
+    total_batches = len(loader)
+    started_at = time.perf_counter()
 
-    for states, targets in loader:
+    for batch_idx, (states, targets) in enumerate(loader, start=1):
         states = states.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
 
@@ -433,6 +445,22 @@ def train_one_epoch(
         batch_size = targets.size(0)
         total_loss += float(loss.item()) * batch_size
         total_rows += batch_size
+
+        if log_every_batches and (
+            batch_idx % log_every_batches == 0 or batch_idx == total_batches
+        ):
+            elapsed = time.perf_counter() - started_at
+            batches_per_second = batch_idx / max(elapsed, 1e-9)
+            remaining_seconds = (total_batches - batch_idx) / max(
+                batches_per_second, 1e-9
+            )
+            print(
+                f"  batch {batch_idx:,}/{total_batches:,} "
+                f"| loss={total_loss / total_rows:.5f} "
+                f"| elapsed={elapsed / 60:.1f}m "
+                f"| eta={remaining_seconds / 60:.1f}m",
+                flush=True,
+            )
 
     return total_loss / max(total_rows, 1)
 
@@ -755,7 +783,14 @@ def main() -> None:
     print(f"\nEarlyStopping monitor: val_hitrate@{args.top_k} (higher is better)")
 
     for epoch in range(1, args.epochs + 1):
-        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        train_loss = train_one_epoch(
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            device,
+            log_every_batches=args.log_every_batches,
+        )
         val_metrics = evaluate_model(
             model,
             val_loader,
@@ -803,7 +838,8 @@ def main() -> None:
             f"val_recall@{args.top_k}={val_recall:.5f} | "
             f"val_hitrate@{args.top_k}={val_hitrate:.5f} | "
             f"val_ndcg@{args.top_k}={val_ndcg:.5f} | "
-            f"{'best' if improved else 'no_improve'}"
+            f"{'best' if improved else 'no_improve'}",
+            flush=True,
         )
 
         if should_stop:
