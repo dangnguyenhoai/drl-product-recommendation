@@ -159,3 +159,33 @@ python -m evaluation.inspect_policy `
   --embedding_dim 32 `
   --hidden_dim 128
 ```
+
+### 9. Compare MLP And DQN On The Same Test Windows
+
+Train the MLP first so its best validation checkpoint is saved:
+
+```powershell
+python -m baseline.baseline_train --action-dim 1000
+```
+
+Then load both model checkpoints into one evaluator. This reports both
+immediate-next-item metrics and next-5-window metrics using exactly the same
+test states, targets, valid actions, and formulas for both models:
+
+```powershell
+python -m evaluation.evaluate_models_common `
+  --data-path data/processed/test_history.pkl `
+  --mlp-model-path outputs/checkpoints/mlp_history_baseline.pth `
+  --dqn-model-path outputs/checkpoints/dqn_pure_stable.pth `
+  --state-size 5 `
+  --top-k 5
+```
+
+Both checkpoints must use the same `action_dim` (`1000` for the current
+train/validation/test data). To compare a DQN checkpoint trained with a recency
+prior, pass its matching value with `--recent-boost`.
+
+Results are saved to:
+
+- `outputs/logs/common_model_comparison.csv`
+- `outputs/logs/common_model_comparison.md`

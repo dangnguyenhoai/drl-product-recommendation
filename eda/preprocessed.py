@@ -111,3 +111,135 @@ print("Unique indexed items:", len(set(all_indexed_items)))
 print("Max indexed item id:", max(all_indexed_items) if all_indexed_items else None)
 print("Saved:", indexed_path)
 print("File size:", f"{indexed_path.stat().st_size / (1024 * 1024):.2f} MB")
+
+
+def save_preprocessing_charts():
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import StrMethodFormatter
+
+    if not lengths:
+        print("\nNo retained histories; preprocessing charts were not created.")
+        return
+
+    figures_dir = BASE_DIR / "results" / "eda"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    average_history_length = sum(lengths) / len(lengths)
+
+    # This histogram is built from every retained user's actual history length.
+    fig, ax = plt.subplots(figsize=(11, 6))
+    ax.hist(lengths, bins=50, color="#4C78A8", edgecolor="white", linewidth=0.5)
+    ax.axvline(
+        average_history_length,
+        color="#E45756",
+        linestyle="--",
+        linewidth=2,
+        label=f"Trung bình: {average_history_length:,.2f}",
+    )
+    ax.set_title("Phân phối độ dài lịch sử mua hàng sau tiền xử lý")
+    ax.set_xlabel("Độ dài lịch sử (số tương tác)")
+    ax.set_ylabel("Số người dùng")
+    ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+    ax.grid(axis="y", alpha=0.25)
+    ax.legend()
+    fig.tight_layout()
+
+    history_chart_path = figures_dir / "history_length_distribution_after_preprocessing.png"
+    fig.savefig(history_chart_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    ax.hist(
+        lengths,
+        bins=50,
+        range=(0, 500),
+        color="#4C78A8",
+        edgecolor="white",
+        linewidth=0.5,
+    )
+    ax.axvline(
+        average_history_length,
+        color="#E45756",
+        linestyle="--",
+        linewidth=2,
+        label=f"Trung bình: {average_history_length:,.2f}",
+    )
+    ax.set_xlim(0, 500)
+    ax.set_title("Phân phối độ dài lịch sử mua hàng sau tiền xử lý (0–500)")
+    ax.set_xlabel("Độ dài lịch sử (số tương tác)")
+    ax.set_ylabel("Số người dùng")
+    ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+    ax.grid(axis="y", alpha=0.25)
+    ax.legend()
+    fig.tight_layout()
+
+    limited_history_chart_path = (
+        figures_dir / "history_length_distribution_after_preprocessing_0_500.png"
+    )
+    fig.savefig(limited_history_chart_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+    before_values = [
+        len(selected_users),
+        len(products),
+        len(order_products),
+    ]
+    after_values = [
+        len(indexed_history),
+        len(top_items),
+        sum(lengths),
+    ]
+    metric_names = ["Người dùng", "Sản phẩm", "Tương tác"]
+
+    # Separate panels keep the three very different scales readable.
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig.suptitle("So sánh quy mô dữ liệu trước và sau tiền xử lý", fontweight="bold")
+
+    for ax, metric, before, after in zip(
+        axes, metric_names, before_values, after_values
+    ):
+        bars = ax.bar(
+            ["Trước", "Sau"],
+            [before, after],
+            color=["#72B7B2", "#F58518"],
+            width=0.62,
+        )
+        retained_percent = after / before * 100 if before else 0
+        largest_value = max(before, after)
+        ax.set_title(f"{metric}\nGiữ lại {retained_percent:.2f}%")
+        ax.set_ylim(-largest_value * 0.06, largest_value * 1.08)
+        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+        ax.grid(axis="y", alpha=0.25)
+        for bar, value in zip(bars, [before, after]):
+            relative_height = value / largest_value if largest_value else 0
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() / 2,
+                f"{value:,}",
+                ha="center",
+                va="center",
+                color="white" if relative_height >= 0.08 else "#333333",
+                fontweight="bold",
+                fontsize=10 if relative_height >= 0.08 else 9,
+            )
+
+    fig.text(
+        0.5,
+        0.01,
+        "Trước: toàn bộ người dùng, sản phẩm và tương tác ban đầu. "
+        "Sau: dữ liệu được giữ lại sau bước lọc và mã hóa.",
+        ha="center",
+        fontsize=9,
+    )
+    fig.tight_layout(rect=(0, 0.06, 1, 0.92))
+
+    scale_chart_path = figures_dir / "data_scale_before_after_preprocessing.png"
+    fig.savefig(scale_chart_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+    print("\nSaved preprocessing charts:")
+    print("-", history_chart_path)
+    print("-", limited_history_chart_path)
+    print("-", scale_chart_path)
+
+
+save_preprocessing_charts()
