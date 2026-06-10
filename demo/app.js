@@ -1,4 +1,4 @@
-const DATA_URL = "../data/demo/demo_data.json";
+const DATA_URL = "../data/demo/demo_data.json?t=" + Date.now();
 
 let demoData = null;
 let selectedProductId = null;
@@ -130,8 +130,8 @@ function renderSimilarTable() {
       </thead>
       <tbody>
         ${rows
-          .map(
-            (item) => `
+      .map(
+        (item) => `
               <tr>
                 <td>
                   <span class="product-name">${escapeHtml(item.name)}</span>
@@ -143,8 +143,8 @@ function renderSimilarTable() {
                 <td>${formatNumber.format(item.popularity_count || 0)}</td>
               </tr>
             `,
-          )
-          .join("")}
+      )
+      .join("")}
       </tbody>
     </table>
   `;
@@ -249,8 +249,8 @@ function renderMetricTable() {
       </thead>
       <tbody>
         ${rows
-          .map(
-            (row) => `
+      .map(
+        (row) => `
               <tr>
                 <td><strong>${escapeHtml(row.method)}</strong></td>
                 <td>${escapeHtml(row.type || "")}</td>
@@ -258,8 +258,8 @@ function renderMetricTable() {
                 <td><span class="score good">${pct(row.hit_rate_at_5)}</span></td>
               </tr>
             `,
-          )
-          .join("")}
+      )
+      .join("")}
       </tbody>
     </table>
   `;

@@ -14,19 +14,14 @@ venv/
 # Logs
 *.log
 
-# Model weights
+
+datasets/
+data/
+outputs/
 *.pt
 *.pth
 *.ckpt
 
-# Dataset
-data/
-datasets/
-
 # OS
 .DS_Store
 Thumbs.db
-
-outputs/
-
-outputs/
