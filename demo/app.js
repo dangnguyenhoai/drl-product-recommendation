@@ -231,7 +231,7 @@ function renderCase() {
 }
 
 function renderMetricTable() {
-  const rows = demoData.metrics.rows || [];
+  const rows = demoData.gan_comparison?.rows || demoData.metrics.rows || [];
   if (!rows.length) {
     els.metricTable.innerHTML = `<div class="empty">Không tìm thấy evaluation CSV.</div>`;
     return;
@@ -245,6 +245,9 @@ function renderMetricTable() {
           <th>Type</th>
           <th>Avg Reward</th>
           <th>HitRate@5</th>
+          <th>Precision@5</th>
+          <th>Recall@5</th>
+          <th>NDCG@5</th>
         </tr>
       </thead>
       <tbody>
@@ -254,8 +257,11 @@ function renderMetricTable() {
               <tr>
                 <td><strong>${escapeHtml(row.method)}</strong></td>
                 <td>${escapeHtml(row.type || "")}</td>
-                <td><span class="score ${Number(row.average_reward) >= 0 ? "good" : "warn"}">${formatNumber.format(row.average_reward)}</span></td>
+                <td>${row.average_reward === null || row.average_reward === undefined || row.average_reward === "" ? "N/A" : `<span class="score ${Number(row.average_reward) >= 0 ? "good" : "warn"}">${formatNumber.format(row.average_reward)}</span>`}</td>
                 <td><span class="score good">${pct(row.hit_rate_at_5)}</span></td>
+                <td>${pct(row.precision_at_5)}</td>
+                <td>${pct(row.recall_at_5)}</td>
+                <td>${pct(row.ndcg_at_5)}</td>
               </tr>
             `,
       )
@@ -266,13 +272,13 @@ function renderMetricTable() {
 }
 
 function renderMetricBars() {
-  const rows = demoData.metrics.rows || [];
+  const rows = demoData.gan_comparison?.rows || demoData.metrics.rows || [];
   const maxHit = Math.max(...rows.map((row) => Number(row.hit_rate_at_5) || 0), 0.001);
 
   els.metricBars.innerHTML = rows
     .map((row) => {
       const width = `${Math.max(2, ((Number(row.hit_rate_at_5) || 0) / maxHit) * 100)}%`;
-      const type = row.type === "dqn" ? "dqn" : "baseline";
+      const type = row.type === "gan" ? "gan" : row.type === "dqn" ? "dqn" : "baseline";
       return `
         <div class="bar-row">
           <strong>${escapeHtml(row.method)}</strong>

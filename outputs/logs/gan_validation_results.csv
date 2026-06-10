@@ -1,0 +1,2 @@
+model,model_path,hit_rate_at_5,precision_at_5,recall_at_5,ndcg_at_5,mrr_at_5,samples
+GAN,outputs/checkpoints/gan_generator_best.pth,0.14667474058977173,0.029334948119037984,0.14667474058977173,0.09873870374091771,0.08300956665328649,14387058

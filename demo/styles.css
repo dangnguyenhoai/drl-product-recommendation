@@ -421,6 +421,10 @@ tr:last-child td {
   background: var(--blue);
 }
 
+.bar-fill.gan {
+  background: var(--teal);
+}
+
 .training-section {
   margin-top: 22px;
   padding-top: 18px;
