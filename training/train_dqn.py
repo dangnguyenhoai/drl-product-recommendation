@@ -1,5 +1,6 @@
 import argparse
 import csv
+import json
 import os
 import pickle
 
@@ -45,7 +46,27 @@ def parse_args():
         "--model_path",
         type=str,
         default="outputs/checkpoints/dqn_weights.pth",
-        help="Where to save trained model weights",
+        help="Where to save last trained model weights",
+    )
+
+    parser.add_argument(
+        "--best_model_path",
+        type=str,
+        default=None,
+        help=(
+            "Where to save the best training checkpoint by episode reward. "
+            "If omitted, '<model_path stem>_best.pth' is used."
+        ),
+    )
+
+    parser.add_argument(
+        "--best_info_path",
+        type=str,
+        default=None,
+        help=(
+            "Where to save JSON metadata for the best training checkpoint. "
+            "If omitted, '<best_model_path stem>.json' is used."
+        ),
     )
 
     parser.add_argument(
@@ -88,6 +109,27 @@ def ensure_parent_dir(file_path):
     parent_dir = os.path.dirname(file_path)
     if parent_dir:
         ensure_dir(parent_dir)
+
+
+def default_best_model_path(model_path):
+    root, ext = os.path.splitext(model_path)
+
+    if not ext:
+        ext = ".pth"
+
+    return f"{root}_best{ext}"
+
+
+def default_best_info_path(best_model_path):
+    root, _ = os.path.splitext(best_model_path)
+    return f"{root}.json"
+
+
+def save_best_info(best_info_path, info):
+    ensure_parent_dir(best_info_path)
+
+    with open(best_info_path, "w", encoding="utf-8") as f:
+        json.dump(info, f, indent=2)
 
 
 def show_training_results(reward_history, loss_history, epsilon_history, plot_dir):
@@ -211,12 +253,22 @@ def train(args):
     )
 
     ensure_parent_dir(args.model_path)
+    if args.best_model_path is None:
+        args.best_model_path = default_best_model_path(args.model_path)
+
+    if args.best_info_path is None:
+        args.best_info_path = default_best_info_path(args.best_model_path)
+
+    ensure_parent_dir(args.best_model_path)
+    ensure_parent_dir(args.best_info_path)
     ensure_parent_dir(args.log_path)
     ensure_dir(args.plot_dir)
 
     reward_history = []
     loss_history = []
     epsilon_history = []
+    best_reward = float("-inf")
+    best_episode = 0
 
     for episode in range(args.episodes):
         state = env.reset()
@@ -274,6 +326,27 @@ def train(args):
 
         torch.save(agent.model.state_dict(), args.model_path)
 
+        if total_reward > best_reward:
+            best_reward = total_reward
+            best_episode = episode + 1
+            torch.save(agent.model.state_dict(), args.best_model_path)
+            save_best_info(
+                args.best_info_path,
+                {
+                    "best_episode": best_episode,
+                    "best_reward": best_reward,
+                    "model_path": args.best_model_path,
+                    "last_model_path": args.model_path,
+                    "data_path": args.data_path,
+                    "episodes": args.episodes,
+                    "action_dim": args.action_dim,
+                    "embedding_dim": args.embedding_dim,
+                    "hidden_dim": args.hidden_dim,
+                    "recent_boost": args.recent_boost,
+                    "selection_metric": "episode_reward",
+                },
+            )
+
     show_training_results(
         reward_history,
         loss_history,
@@ -289,6 +362,11 @@ def train(args):
     )
 
     print(f"\nSaved model to: {args.model_path}")
+    print(
+        f"Saved best training model to: {args.best_model_path} "
+        f"(episode {best_episode}, reward {best_reward})"
+    )
+    print(f"Saved best training metadata to: {args.best_info_path}")
     print(f"Saved plots to: {args.plot_dir}")
     print(f"Saved log to: {args.log_path}")
 
