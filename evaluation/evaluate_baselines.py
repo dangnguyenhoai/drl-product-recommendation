@@ -5,6 +5,7 @@ import random
 from collections import Counter
 
 from env.recommendation_env import RecommendationEnv
+from evaluation.metrics import TopKMetrics, print_top_k_metrics
 
 
 def parse_args():
@@ -69,8 +70,7 @@ def get_popular_items(indexed_history, top_k):
 
 def evaluate_policy(env, episodes, policy_fn, top_k):
     total_rewards = []
-    total_step_hits = 0
-    total_steps = 0
+    metrics_tracker = TopKMetrics(top_k)
 
     for episode in range(episodes):
         state = env.reset()
@@ -78,15 +78,15 @@ def evaluate_policy(env, episodes, policy_fn, top_k):
         episode_reward = 0
 
         while not done:
-            actions = policy_fn(state)
+            actions = policy_fn(state, env)
 
             next_state, reward, done, info = env.step(actions)
 
             episode_reward += reward
-            hits = info.get("hits", 0)
-            if hits > 0:
-                total_step_hits += 1
-            total_steps += 1
+            metrics_tracker.update(
+                info.get("recommended_items", actions),
+                info.get("target_items", []),
+            )
 
             state = next_state
 
@@ -94,12 +94,7 @@ def evaluate_policy(env, episodes, policy_fn, top_k):
 
     average_reward = sum(total_rewards) / len(total_rewards)
 
-    if total_steps == 0:
-        hit_rate = 0.0
-    else:
-        hit_rate = total_step_hits / total_steps
-
-    return average_reward, hit_rate
+    return average_reward, metrics_tracker.as_dict()
 
 
 def main(args):
@@ -121,23 +116,46 @@ def main(args):
         top_k=args.top_k,
     )
 
-    def random_policy(_state):
+    def random_policy(_state, env):
+        candidates = [
+            item
+            for item in valid_actions
+            if item not in env.recommended_items
+        ]
+
+        if len(candidates) <= args.top_k:
+            return candidates
+
         return random.sample(
-            valid_actions,
+            candidates,
             args.top_k,
         )
 
-    def popularity_policy(_state):
-        return popular_items
+    def popularity_policy(_state, env):
+        actions = [
+            item
+            for item in popular_items
+            if item not in env.recommended_items
+        ]
 
-    random_reward, random_hit_rate = evaluate_policy(
+        if len(actions) < args.top_k:
+            used = set(actions)
+            actions.extend(
+                item
+                for item in valid_actions
+                if item not in used and item not in env.recommended_items
+            )
+
+        return actions[: args.top_k]
+
+    random_reward, random_metrics = evaluate_policy(
         env=random_env,
         episodes=args.episodes,
         policy_fn=random_policy,
         top_k=args.top_k,
     )
 
-    popularity_reward, popularity_hit_rate = evaluate_policy(
+    popularity_reward, popularity_metrics = evaluate_policy(
         env=popularity_env,
         episodes=args.episodes,
         policy_fn=popularity_policy,
@@ -146,10 +164,10 @@ def main(args):
 
     print("\n===== Baseline Results =====")
     print(f"Random Average Reward: {random_reward:.3f}")
-    print(f"Random Hit Rate@{args.top_k}: {random_hit_rate:.4f}")
+    print_top_k_metrics(random_metrics, args.top_k, prefix="Random")
 
     print(f"Popularity Average Reward: {popularity_reward:.3f}")
-    print(f"Popularity Hit Rate@{args.top_k}: {popularity_hit_rate:.4f}")
+    print_top_k_metrics(popularity_metrics, args.top_k, prefix="Popularity")
 
 
 if __name__ == "__main__":

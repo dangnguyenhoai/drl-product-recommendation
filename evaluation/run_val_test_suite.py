@@ -149,6 +149,15 @@ def parse_hit_rate(output):
     return None
 
 
+def parse_metric_at_k(output, metric_name):
+    match = re.search(rf"{metric_name}@\d+:\s*([-+]?\d*\.?\d+)", output)
+
+    if match:
+        return float(match.group(1))
+
+    return None
+
+
 def parse_named_metric(output, name):
     match = re.search(rf"{name}:\s*([-+]?\d*\.?\d+)", output)
 
@@ -174,6 +183,7 @@ def evaluate_dqn(
     hidden_dim,
     device,
     episodes,
+    top_k,
     checkpoint_path,
     recent_boost,
     method,
@@ -192,6 +202,8 @@ def evaluate_dqn(
         str(checkpoint_path),
         "--episodes",
         str(episodes),
+        "--top_k",
+        str(top_k),
         "--action_dim",
         str(action_dim),
         "--embedding_dim",
@@ -211,6 +223,9 @@ def evaluate_dqn(
         "method": method,
         "average_reward": parse_average_reward(output),
         "hit_rate_at_5": parse_hit_rate(output),
+        "precision_at_5": parse_metric_at_k(output, "Precision"),
+        "recall_at_5": parse_metric_at_k(output, "Recall"),
+        "ndcg_at_5": parse_metric_at_k(output, "NDCG"),
         "episodes": episodes,
         "model_path": str(checkpoint_path),
         "recent_boost": recent_boost,
@@ -241,6 +256,9 @@ def evaluate_baselines(data_path, episodes, top_k, split):
             "method": "Random baseline",
             "average_reward": parse_named_metric(output, "Random Average Reward"),
             "hit_rate_at_5": parse_named_metric(output, r"Random Hit Rate@\d+"),
+            "precision_at_5": parse_named_metric(output, r"Random Precision@\d+"),
+            "recall_at_5": parse_named_metric(output, r"Random Recall@\d+"),
+            "ndcg_at_5": parse_named_metric(output, r"Random NDCG@\d+"),
             "episodes": episodes,
             "model_path": "",
             "recent_boost": "",
@@ -254,6 +272,9 @@ def evaluate_baselines(data_path, episodes, top_k, split):
             "method": "Popularity baseline",
             "average_reward": parse_named_metric(output, "Popularity Average Reward"),
             "hit_rate_at_5": parse_named_metric(output, r"Popularity Hit Rate@\d+"),
+            "precision_at_5": parse_named_metric(output, r"Popularity Precision@\d+"),
+            "recall_at_5": parse_named_metric(output, r"Popularity Recall@\d+"),
+            "ndcg_at_5": parse_named_metric(output, r"Popularity NDCG@\d+"),
             "episodes": episodes,
             "model_path": "",
             "recent_boost": "",
@@ -285,6 +306,9 @@ def evaluate_recent_baseline(data_path, episodes, top_k, split):
             "method": "Recent-item baseline",
             "average_reward": parse_average_reward(output),
             "hit_rate_at_5": parse_hit_rate(output),
+            "precision_at_5": parse_metric_at_k(output, "Precision"),
+            "recall_at_5": parse_metric_at_k(output, "Recall"),
+            "ndcg_at_5": parse_metric_at_k(output, "NDCG"),
             "episodes": episodes,
             "model_path": "",
             "recent_boost": "",
@@ -301,6 +325,9 @@ def save_csv(rows, output_path):
         "method",
         "average_reward",
         "hit_rate_at_5",
+        "precision_at_5",
+        "recall_at_5",
+        "ndcg_at_5",
         "episodes",
         "model_path",
         "recent_boost",
@@ -327,8 +354,10 @@ def save_markdown(val_rows, test_rows, best_row, output_path):
     lines.append("# Validation/Test Evaluation Report\n")
 
     lines.append("## Validation Results\n")
-    lines.append("| Method | Avg Reward | HitRate@5 | Recent Boost |")
-    lines.append("|---|---:|---:|---:|")
+    lines.append(
+        "| Method | Avg Reward | HitRate@5 | Precision@5 | Recall@5 | NDCG@5 | Recent Boost |"
+    )
+    lines.append("|---|---:|---:|---:|---:|---:|---:|")
 
     sorted_val_rows = sorted(
         val_rows,
@@ -339,7 +368,9 @@ def save_markdown(val_rows, test_rows, best_row, output_path):
     for row in sorted_val_rows:
         lines.append(
             f"| {row['method']} | {row['average_reward']:.3f} | "
-            f"{row['hit_rate_at_5']:.4f} | {row['recent_boost']} |"
+            f"{row['hit_rate_at_5']:.4f} | {row['precision_at_5']:.4f} | "
+            f"{row['recall_at_5']:.4f} | {row['ndcg_at_5']:.4f} | "
+            f"{row['recent_boost']} |"
         )
 
     lines.append("\n## Selected Model\n")
@@ -350,8 +381,10 @@ def save_markdown(val_rows, test_rows, best_row, output_path):
     lines.append(f"- Recent boost: `{best_row['recent_boost']}`")
 
     lines.append("\n## Final Test Results\n")
-    lines.append("| Method | Avg Reward | HitRate@5 | Type | Recent Boost |")
-    lines.append("|---|---:|---:|---|---:|")
+    lines.append(
+        "| Method | Avg Reward | HitRate@5 | Precision@5 | Recall@5 | NDCG@5 | Type | Recent Boost |"
+    )
+    lines.append("|---|---:|---:|---:|---:|---:|---|---:|")
 
     sorted_test_rows = sorted(
         test_rows,
@@ -362,12 +395,19 @@ def save_markdown(val_rows, test_rows, best_row, output_path):
     for row in sorted_test_rows:
         avg_reward = row["average_reward"]
         hit_rate = row["hit_rate_at_5"]
+        precision = row["precision_at_5"]
+        recall = row["recall_at_5"]
+        ndcg = row["ndcg_at_5"]
 
         avg_reward_text = f"{avg_reward:.3f}" if avg_reward is not None else "N/A"
         hit_rate_text = f"{hit_rate:.4f}" if hit_rate is not None else "N/A"
+        precision_text = f"{precision:.4f}" if precision is not None else "N/A"
+        recall_text = f"{recall:.4f}" if recall is not None else "N/A"
+        ndcg_text = f"{ndcg:.4f}" if ndcg is not None else "N/A"
 
         lines.append(
             f"| {row['method']} | {avg_reward_text} | {hit_rate_text} | "
+            f"{precision_text} | {recall_text} | {ndcg_text} | "
             f"{row['type']} | {row['recent_boost']} |"
         )
 
@@ -426,6 +466,7 @@ def main():
             hidden_dim=args.hidden_dim,
             device=args.device,
             episodes=args.episodes,
+            top_k=args.top_k,
             checkpoint_path=candidate["checkpoint_path"],
             recent_boost=candidate["recent_boost"],
             method=candidate["method"],
@@ -472,6 +513,7 @@ def main():
         hidden_dim=args.hidden_dim,
         device=args.device,
         episodes=args.episodes,
+        top_k=args.top_k,
         checkpoint_path=Path(best_row["model_path"]),
         recent_boost=best_row["recent_boost"],
         method=f"{best_row['method']} (selected by validation)",
@@ -512,6 +554,9 @@ def main():
             f"{idx}. {row['method']}"
             f" | Avg Reward: {row['average_reward']:.3f}"
             f" | HitRate@5: {row['hit_rate_at_5']:.4f}"
+            f" | Precision@5: {row['precision_at_5']:.4f}"
+            f" | Recall@5: {row['recall_at_5']:.4f}"
+            f" | NDCG@5: {row['ndcg_at_5']:.4f}"
         )
 
 
