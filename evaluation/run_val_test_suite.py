@@ -1,6 +1,8 @@
 import argparse
 import csv
+import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -100,6 +102,26 @@ def parse_args():
         help="Directory to save validation/test reports",
     )
 
+    parser.add_argument(
+        "--selected_model_path",
+        type=str,
+        default=None,
+        help=(
+            "Where to copy the model selected by validation. "
+            "If omitted, '<checkpoint_dir>/best_selected_by_validation.pth' is used."
+        ),
+    )
+
+    parser.add_argument(
+        "--selected_metadata_path",
+        type=str,
+        default=None,
+        help=(
+            "Where to save JSON metadata for the selected model. "
+            "If omitted, '<output_dir>/best_selected_by_validation.json' is used."
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -174,6 +196,42 @@ def resolve_checkpoint(checkpoint_dir, filename):
         return path
 
     return Path(checkpoint_dir) / filename
+
+
+def save_selected_model(best_row, selected_model_path, selected_metadata_path):
+    source_model_path = Path(best_row["model_path"])
+
+    if not source_model_path.exists():
+        raise FileNotFoundError(
+            f"Selected model checkpoint not found: {source_model_path}"
+        )
+
+    selected_model_path.parent.mkdir(parents=True, exist_ok=True)
+    selected_metadata_path.parent.mkdir(parents=True, exist_ok=True)
+
+    shutil.copy2(source_model_path, selected_model_path)
+
+    metadata = {
+        "selection_metric": "validation_hit_rate_at_5",
+        "selected_method": best_row["method"],
+        "source_model_path": str(source_model_path),
+        "selected_model_path": str(selected_model_path),
+        "split": best_row["split"],
+        "average_reward": best_row["average_reward"],
+        "hit_rate_at_5": best_row["hit_rate_at_5"],
+        "precision_at_5": best_row["precision_at_5"],
+        "recall_at_5": best_row["recall_at_5"],
+        "ndcg_at_5": best_row["ndcg_at_5"],
+        "episodes": best_row["episodes"],
+        "recent_boost": best_row["recent_boost"],
+        "type": best_row["type"],
+    }
+
+    with open(selected_metadata_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"Saved selected validation model: {selected_model_path}")
+    print(f"Saved selected validation metadata: {selected_metadata_path}")
 
 
 def evaluate_dqn(
@@ -437,6 +495,7 @@ def main():
     args = parse_args()
 
     checkpoint_dir = Path(args.checkpoint_dir)
+    output_dir = Path(args.output_dir)
 
     candidates = [
         {
@@ -486,6 +545,22 @@ def main():
     print(f"Recent boost: {best_row['recent_boost']}")
     print(f"Val HitRate@5: {best_row['hit_rate_at_5']:.4f}")
 
+    selected_model_path = (
+        Path(args.selected_model_path)
+        if args.selected_model_path is not None
+        else checkpoint_dir / "best_selected_by_validation.pth"
+    )
+    selected_metadata_path = (
+        Path(args.selected_metadata_path)
+        if args.selected_metadata_path is not None
+        else output_dir / "best_selected_by_validation.json"
+    )
+    save_selected_model(
+        best_row=best_row,
+        selected_model_path=selected_model_path,
+        selected_metadata_path=selected_metadata_path,
+    )
+
     test_rows = []
 
     test_rows.extend(
@@ -521,8 +596,6 @@ def main():
     )
 
     test_rows.append(best_test_row)
-
-    output_dir = Path(args.output_dir)
 
     save_csv(
         val_rows,
