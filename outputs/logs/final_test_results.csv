@@ -1,5 +1,0 @@
-split,method,average_reward,hit_rate_at_5,precision_at_5,recall_at_5,ndcg_at_5,episodes,model_path,recent_boost,type
-test,Random baseline,-9.862,0.0248,0.005,0.0052,0.0049,1000,,,baseline
-test,Popularity baseline,-4.055,0.1772,0.0385,0.0394,0.0413,1000,,,baseline
-test,Recent-item baseline,-1.335,0.2029,0.0513,0.0526,0.054,1000,,,baseline
-test,DQN + recency prior boost=2 (selected by validation),-4.02,0.1497,0.04,0.0411,0.0475,1000,outputs/checkpoints/dqn_recency2_stable.pth,2.0,dqn

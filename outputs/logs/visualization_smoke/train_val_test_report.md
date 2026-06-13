@@ -4,24 +4,24 @@
 
 | Method | Avg Reward | HitRate@5 | Precision@5 | Recall@5 | NDCG@5 | Recent Boost |
 |---|---:|---:|---:|---:|---:|---:|
-| DQN + recency prior boost=2 | 4.000 | 0.6667 | 0.1333 | 0.1333 | 0.1131 | 2.0 |
-| DQN pure stable | -0.500 | 0.2500 | 0.0500 | 0.0500 | 0.0328 | 0.0 |
-| DQN + recency prior boost=5 | -9.500 | 0.0769 | 0.0154 | 0.0154 | 0.0130 | 5.0 |
+| DQN + recency prior boost=5 | -3.992 | 0.1462 | 0.0394 | 0.0404 | 0.0477 | 5.0 |
+| DQN + recency prior boost=2 | -4.325 | 0.1416 | 0.0384 | 0.0394 | 0.0465 | 2.0 |
+| DQN pure stable | -8.585 | 0.0624 | 0.0127 | 0.0131 | 0.0129 | 0.0 |
 
 ## Selected Model
 
-- Selected by validation HitRate@5: **DQN + recency prior boost=2**
-- Model path: `outputs\checkpoints\dqn_recency2_stable.pth`
-- Recent boost: `2.0`
+- Selected by validation HitRate@5: **DQN + recency prior boost=5**
+- Model path: `outputs/checkpoints/dqn_recency5_stable_best.pth`
+- Recent boost: `5.0`
 
 ## Final Test Results
 
 | Method | Avg Reward | HitRate@5 | Precision@5 | Recall@5 | NDCG@5 | Type | Recent Boost |
 |---|---:|---:|---:|---:|---:|---|---:|
-| Popularity baseline | -2.000 | 1.0000 | 0.2000 | 0.2195 | 0.2227 | baseline |  |
-| Recent-item baseline | 8.000 | 0.3636 | 0.1091 | 0.1364 | 0.1513 | baseline |  |
-| DQN + recency prior boost=2 (selected by validation) | -12.000 | 0.1053 | 0.0211 | 0.0217 | 0.0248 | dqn | 2.0 |
-| Random baseline | -13.000 | 0.1000 | 0.0200 | 0.0200 | 0.0170 | baseline |  |
+| Recent-item baseline | -1.221 | 0.2059 | 0.0522 | 0.0538 | 0.0564 | baseline |  |
+| Popularity baseline | -4.365 | 0.1668 | 0.0364 | 0.0373 | 0.0387 | baseline |  |
+| DQN + recency prior boost=5 (selected by validation) | -4.511 | 0.1456 | 0.0373 | 0.0384 | 0.0459 | dqn | 5.0 |
+| Random baseline | -10.649 | 0.0252 | 0.0051 | 0.0052 | 0.0054 | baseline |  |
 
 ## Interpretation
 

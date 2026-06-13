@@ -1,4 +1,4 @@
 split,method,average_reward,hit_rate_at_5,precision_at_5,recall_at_5,ndcg_at_5,episodes,model_path,recent_boost,type
-validation,DQN pure stable,-0.5,0.25,0.05,0.05,0.0328,2,outputs\checkpoints\dqn_pure_stable.pth,0.0,dqn
-validation,DQN + recency prior boost=2,4.0,0.6667,0.1333,0.1333,0.1131,2,outputs\checkpoints\dqn_recency2_stable.pth,2.0,dqn
-validation,DQN + recency prior boost=5,-9.5,0.0769,0.0154,0.0154,0.013,2,outputs\checkpoints\dqn_recency5_stable.pth,5.0,dqn
+validation,DQN pure stable,-8.585,0.0624,0.0127,0.0131,0.0129,1000,outputs/checkpoints/dqn_pure_stable_best.pth,0.0,dqn
+validation,DQN + recency prior boost=2,-4.325,0.1416,0.0384,0.0394,0.0465,1000,outputs/checkpoints/dqn_recency2_stable_best.pth,2.0,dqn
+validation,DQN + recency prior boost=5,-3.992,0.1462,0.0394,0.0404,0.0477,1000,outputs/checkpoints/dqn_recency5_stable_best.pth,5.0,dqn

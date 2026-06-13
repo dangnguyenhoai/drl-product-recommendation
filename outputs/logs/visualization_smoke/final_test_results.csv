@@ -1,5 +1,5 @@
 split,method,average_reward,hit_rate_at_5,precision_at_5,recall_at_5,ndcg_at_5,episodes,model_path,recent_boost,type
-test,Random baseline,-13.0,0.1,0.02,0.02,0.017,2,,,baseline
-test,Popularity baseline,-2.0,1.0,0.2,0.2195,0.2227,2,,,baseline
-test,Recent-item baseline,8.0,0.3636,0.1091,0.1364,0.1513,2,,,baseline
-test,DQN + recency prior boost=2 (selected by validation),-12.0,0.1053,0.0211,0.0217,0.0248,2,outputs\checkpoints\dqn_recency2_stable.pth,2.0,dqn
+test,Random baseline,-10.649,0.0252,0.0051,0.0052,0.0054,1000,,,baseline
+test,Popularity baseline,-4.365,0.1668,0.0364,0.0373,0.0387,1000,,,baseline
+test,Recent-item baseline,-1.221,0.2059,0.0522,0.0538,0.0564,1000,,,baseline
+test,DQN + recency prior boost=5 (selected by validation),-4.511,0.1456,0.0373,0.0384,0.0459,1000,outputs/checkpoints/dqn_recency5_stable_best.pth,5.0,dqn
