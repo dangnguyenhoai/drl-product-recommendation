@@ -1,0 +1,9 @@
+127.0.0.1 - - [13/Jun/2026 23:21:08] "GET /data/demo/demo_data.json HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jun/2026 23:21:08] "GET /demo/index.html HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jun/2026 23:21:38] "GET /demo/index.html HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jun/2026 23:21:38] "GET /demo/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jun/2026 23:21:38] "GET /demo/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jun/2026 23:21:38] "GET /data/demo/demo_data.json?t=1781367698236 HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jun/2026 23:21:38] code 404, message File not found
+127.0.0.1 - - [13/Jun/2026 23:21:38] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [13/Jun/2026 23:39:18] "GET /data/demo/demo_data.json?t=1781368758177 HTTP/1.1" 200 -
