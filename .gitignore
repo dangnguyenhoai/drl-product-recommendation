@@ -1,12 +1,27 @@
-.venv/
+# Python
 __pycache__/
 *.pyc
-.pytest_cache/
-*.egg-info/
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+.env/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+
+datasets/
 data/
-artifacts/*.pt
-artifacts/*.png
-artifacts/*.csv
-artifacts/*.json
-artifacts/smoke/
-artifacts_stable/
+outputs/
+*.pt
+*.pth
+*.ckpt
+
+# OS
+.DS_Store
+Thumbs.db
