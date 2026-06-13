@@ -207,9 +207,6 @@ Biểu đồ huấn luyện của DQN sau khi làm mượt bằng rolling mean 1
 
 ![Biểu đồ huấn luyện DQN đã làm mượt](outputs/plots/dqn_training.png)
 
-Một số biểu đồ log huấn luyện bổ sung:
-
-![Training loss](outputs/plots/training_loss.png)
 
 ![Validation metrics](outputs/plots/validation_metrics.png)
 
