@@ -154,11 +154,12 @@ Huấn luyện DQN thuần:
 ```powershell
 python -m training.train_dqn `
   --data_path data/processed/train_history.pkl `
-  --episodes 10000 `
+  --episodes all `
   --action_dim 1000 `
   --model_path outputs/checkpoints/dqn_pure_stable.pth `
   --log_path outputs/logs/train_dqn_pure_stable.csv `
-  --recent_boost 0
+  --recent_boost 0 `
+  --log_interval 1000
 ```
 
 Huấn luyện DQN với recency prior `boost=2`:
@@ -166,11 +167,12 @@ Huấn luyện DQN với recency prior `boost=2`:
 ```powershell
 python -m training.train_dqn `
   --data_path data/processed/train_history.pkl `
-  --episodes 10000 `
+  --episodes all `
   --action_dim 1000 `
   --model_path outputs/checkpoints/dqn_recency2_stable.pth `
   --log_path outputs/logs/train_dqn_recency2_stable.csv `
-  --recent_boost 2
+  --recent_boost 2 `
+  --log_interval 1000
 ```
 
 Huấn luyện DQN với recency prior `boost=5`:
@@ -178,11 +180,12 @@ Huấn luyện DQN với recency prior `boost=5`:
 ```powershell
 python -m training.train_dqn `
   --data_path data/processed/train_history.pkl `
-  --episodes 10000 `
+  --episodes all `
   --action_dim 1000 `
   --model_path outputs/checkpoints/dqn_recency5_stable.pth `
   --log_path outputs/logs/train_dqn_recency5_stable.csv `
-  --recent_boost 5
+  --recent_boost 5 `
+  --log_interval 1000
 ```
 
 Chọn model bằng validation và đánh giá trên test:
@@ -191,14 +194,15 @@ Chọn model bằng validation và đánh giá trên test:
 python -m evaluation.run_val_test_suite `
   --val_data_path data/processed/val_history.pkl `
   --test_data_path data/processed/test_history.pkl `
-  --episodes 1000 `
+  --episodes all `
   --top_k 5 `
   --action_dim 1000 `
   --checkpoint_dir outputs/checkpoints `
   --pure_model dqn_pure_stable_best.pth `
   --boost2_model dqn_recency2_stable_best.pth `
   --boost5_model dqn_recency5_stable_best.pth `
-  --output_dir outputs/logs/visualization_smoke
+  --output_dir outputs/logs/visualization_smoke `
+  --log_interval 1000
 ```
 
 ## Kết quả huấn luyện

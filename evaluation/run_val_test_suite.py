@@ -27,9 +27,12 @@ def parse_args():
 
     parser.add_argument(
         "--episodes",
-        type=int,
+        type=str,
         default=1000,
-        help="Number of evaluation episodes",
+        help=(
+            "Number of evaluation episodes, or 'all' to evaluate all possible "
+            "windows/interactions."
+        ),
     )
 
     parser.add_argument(
@@ -120,6 +123,13 @@ def parse_args():
             "Where to save JSON metadata for the selected model. "
             "If omitted, '<output_dir>/best_selected_by_validation.json' is used."
         ),
+    )
+
+    parser.add_argument(
+        "--log_interval",
+        type=int,
+        default=1000,
+        help="Print child evaluation progress every N episodes.",
     )
 
     return parser.parse_args()
@@ -242,6 +252,7 @@ def evaluate_dqn(
     device,
     episodes,
     top_k,
+    log_interval,
     checkpoint_path,
     recent_boost,
     method,
@@ -272,6 +283,8 @@ def evaluate_dqn(
         str(recent_boost),
         "--device",
         device,
+        "--log_interval",
+        str(log_interval),
     ]
 
     output = run_command(command)
@@ -291,7 +304,7 @@ def evaluate_dqn(
     }
 
 
-def evaluate_baselines(data_path, episodes, top_k, split):
+def evaluate_baselines(data_path, episodes, top_k, log_interval, split):
     command = [
         sys.executable,
         "-m",
@@ -302,6 +315,8 @@ def evaluate_baselines(data_path, episodes, top_k, split):
         str(episodes),
         "--top_k",
         str(top_k),
+        "--log_interval",
+        str(log_interval),
     ]
 
     output = run_command(command)
@@ -343,7 +358,7 @@ def evaluate_baselines(data_path, episodes, top_k, split):
     return rows
 
 
-def evaluate_recent_baseline(data_path, episodes, top_k, split):
+def evaluate_recent_baseline(data_path, episodes, top_k, log_interval, split):
     command = [
         sys.executable,
         "-m",
@@ -354,6 +369,8 @@ def evaluate_recent_baseline(data_path, episodes, top_k, split):
         str(episodes),
         "--top_k",
         str(top_k),
+        "--log_interval",
+        str(log_interval),
     ]
 
     output = run_command(command)
@@ -526,6 +543,7 @@ def main():
             device=args.device,
             episodes=args.episodes,
             top_k=args.top_k,
+            log_interval=args.log_interval,
             checkpoint_path=candidate["checkpoint_path"],
             recent_boost=candidate["recent_boost"],
             method=candidate["method"],
@@ -568,6 +586,7 @@ def main():
             data_path=args.test_data_path,
             episodes=args.episodes,
             top_k=args.top_k,
+            log_interval=args.log_interval,
             split="test",
         )
     )
@@ -577,6 +596,7 @@ def main():
             data_path=args.test_data_path,
             episodes=args.episodes,
             top_k=args.top_k,
+            log_interval=args.log_interval,
             split="test",
         )
     )
@@ -589,6 +609,7 @@ def main():
         device=args.device,
         episodes=args.episodes,
         top_k=args.top_k,
+        log_interval=args.log_interval,
         checkpoint_path=Path(best_row["model_path"]),
         recent_boost=best_row["recent_boost"],
         method=f"{best_row['method']} (selected by validation)",

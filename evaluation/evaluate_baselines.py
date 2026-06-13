@@ -6,6 +6,12 @@ from collections import Counter
 
 from env.recommendation_env import RecommendationEnv
 from evaluation.metrics import TopKMetrics, print_top_k_metrics
+from utils.full_pass import (
+    count_full_pass,
+    iter_full_pass_episode_starts,
+    parse_episode_count,
+    uses_full_pass,
+)
 
 
 def parse_args():
@@ -20,9 +26,19 @@ def parse_args():
 
     parser.add_argument(
         "--episodes",
-        type=int,
+        type=str,
         default=100,
-        help="Number of evaluation episodes",
+        help=(
+            "Number of evaluation episodes, or 'all' to evaluate all possible "
+            "windows/interactions."
+        ),
+    )
+
+    parser.add_argument(
+        "--state_dim",
+        type=int,
+        default=5,
+        help="State dimension / history window size",
     )
 
     parser.add_argument(
@@ -30,6 +46,13 @@ def parse_args():
         type=int,
         default=5,
         help="Number of recommended items",
+    )
+
+    parser.add_argument(
+        "--log_interval",
+        type=int,
+        default=1,
+        help="Print progress every N episodes. Use a larger value for --episodes all.",
     )
 
     return parser.parse_args()
@@ -68,12 +91,40 @@ def get_popular_items(indexed_history, top_k):
     return popular_items
 
 
-def evaluate_policy(env, episodes, policy_fn, top_k):
+def evaluate_policy(env, indexed_history, episodes, policy_fn, top_k, log_interval):
     total_rewards = []
     metrics_tracker = TopKMetrics(top_k)
 
-    for episode in range(episodes):
-        state = env.reset()
+    full_pass = uses_full_pass(episodes)
+    if full_pass:
+        total_episodes, total_windows = count_full_pass(
+            indexed_history,
+            state_size=env.state_size,
+            top_k=top_k,
+            max_steps=env.max_steps,
+        )
+        episode_starts = iter_full_pass_episode_starts(
+            indexed_history,
+            state_size=env.state_size,
+            top_k=top_k,
+            max_steps=env.max_steps,
+        )
+        print("Evaluation mode: full pass over all windows/interactions")
+        print(f"Total full-pass episodes: {total_episodes}")
+        print(f"Total full-pass evaluation windows: {total_windows}")
+    else:
+        total_episodes = parse_episode_count(episodes)
+        episode_starts = (None for _ in range(total_episodes))
+        print("Evaluation mode: sampled random episodes")
+        print(f"Total requested episodes: {total_episodes}")
+
+    for episode, episode_start in enumerate(episode_starts, start=1):
+        if full_pass:
+            user_id, pointer = episode_start
+            state = env.reset_at(user_id, pointer)
+        else:
+            state = env.reset()
+
         done = False
         episode_reward = 0
 
@@ -92,6 +143,17 @@ def evaluate_policy(env, episodes, policy_fn, top_k):
 
         total_rewards.append(episode_reward)
 
+        if (
+            log_interval <= 1
+            or episode == 1
+            or episode == total_episodes
+            or episode % log_interval == 0
+        ):
+            print(
+                f"Episode {episode}/{total_episodes}"
+                f" | Reward: {episode_reward}"
+            )
+
     average_reward = sum(total_rewards) / len(total_rewards)
 
     return average_reward, metrics_tracker.as_dict()
@@ -108,11 +170,13 @@ def main(args):
 
     random_env = RecommendationEnv(
         indexed_history,
+        state_size=args.state_dim,
         top_k=args.top_k,
     )
 
     popularity_env = RecommendationEnv(
         indexed_history,
+        state_size=args.state_dim,
         top_k=args.top_k,
     )
 
@@ -150,16 +214,20 @@ def main(args):
 
     random_reward, random_metrics = evaluate_policy(
         env=random_env,
+        indexed_history=indexed_history,
         episodes=args.episodes,
         policy_fn=random_policy,
         top_k=args.top_k,
+        log_interval=args.log_interval,
     )
 
     popularity_reward, popularity_metrics = evaluate_policy(
         env=popularity_env,
+        indexed_history=indexed_history,
         episodes=args.episodes,
         policy_fn=popularity_policy,
         top_k=args.top_k,
+        log_interval=args.log_interval,
     )
 
     print("\n===== Baseline Results =====")

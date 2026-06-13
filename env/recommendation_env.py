@@ -55,6 +55,30 @@ class RecommendationEnv:
 
         return np.array(self.state, dtype=np.int64)
 
+    def reset_at(self, user, pointer):
+        if user not in self.user_history:
+            raise KeyError(f"Unknown user: {user}")
+
+        history = self.user_history[user]
+        max_start = len(history) - self.state_size - self.top_k - 1
+        if pointer < 0 or pointer > max_start:
+            raise ValueError(
+                f"Invalid pointer {pointer} for user {user}. "
+                f"Expected 0 <= pointer <= {max_start}."
+            )
+
+        self.current_user = user
+        self.current_history = history
+        self.pointer = pointer
+        self.current_step = 0
+        self.recommended_items = set()
+
+        self.state = self.current_history[
+            self.pointer : self.pointer + self.state_size
+        ]
+
+        return np.array(self.state, dtype=np.int64)
+
     def step(self, actions):
         if not isinstance(actions, (list, tuple, np.ndarray)):
             actions = [actions]

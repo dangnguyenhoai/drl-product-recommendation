@@ -7,6 +7,12 @@ import torch
 from env.recommendation_env import RecommendationEnv
 from evaluation.metrics import TopKMetrics, print_top_k_metrics
 from models.dqn_agent import DQNAgent
+from utils.full_pass import (
+    count_full_pass,
+    iter_full_pass_episode_starts,
+    parse_episode_count,
+    uses_full_pass,
+)
 
 
 def parse_args():
@@ -28,9 +34,12 @@ def parse_args():
 
     parser.add_argument(
         "--episodes",
-        type=int,
+        type=str,
         default=100,
-        help="Number of evaluation episodes",
+        help=(
+            "Number of evaluation episodes, or 'all' to evaluate all possible "
+            "windows/interactions."
+        ),
     )
 
     parser.add_argument(
@@ -80,6 +89,12 @@ def parse_args():
         type=float,
         default=0.0,
         help="Q-value boost applied to recent state items during action selection",
+    )
+    parser.add_argument(
+        "--log_interval",
+        type=int,
+        default=1,
+        help="Print progress every N episodes. Use a larger value for --episodes all.",
     )
 
     return parser.parse_args()
@@ -161,6 +176,29 @@ def evaluate(args):
         top_k=args.top_k,
     )
 
+    full_pass = uses_full_pass(args.episodes)
+    if full_pass:
+        total_episodes, total_windows = count_full_pass(
+            indexed_history,
+            state_size=args.state_dim,
+            top_k=args.top_k,
+            max_steps=env.max_steps,
+        )
+        episode_starts = iter_full_pass_episode_starts(
+            indexed_history,
+            state_size=args.state_dim,
+            top_k=args.top_k,
+            max_steps=env.max_steps,
+        )
+        print("Evaluation mode: full pass over all windows/interactions")
+        print(f"Total full-pass episodes: {total_episodes}")
+        print(f"Total full-pass evaluation windows: {total_windows}")
+    else:
+        total_episodes = parse_episode_count(args.episodes)
+        episode_starts = (None for _ in range(total_episodes))
+        print("Evaluation mode: sampled random episodes")
+        print(f"Total requested episodes: {total_episodes}")
+
     agent = load_agent(
         args=args,
         valid_actions=valid_actions,
@@ -169,8 +207,13 @@ def evaluate(args):
     total_rewards = []
     metrics_tracker = TopKMetrics(args.top_k)
 
-    for episode in range(args.episodes):
-        state = env.reset()
+    for episode, episode_start in enumerate(episode_starts, start=1):
+        if full_pass:
+            user_id, pointer = episode_start
+            state = env.reset_at(user_id, pointer)
+        else:
+            state = env.reset()
+
         done = False
         episode_reward = 0
 
@@ -191,10 +234,16 @@ def evaluate(args):
 
         total_rewards.append(episode_reward)
 
-        print(
-            f"Episode {episode + 1}/{args.episodes}"
-            f" | Reward: {episode_reward}"
-        )
+        if (
+            args.log_interval <= 1
+            or episode == 1
+            or episode == total_episodes
+            or episode % args.log_interval == 0
+        ):
+            print(
+                f"Episode {episode}/{total_episodes}"
+                f" | Reward: {episode_reward}"
+            )
 
     average_reward = sum(total_rewards) / len(total_rewards)
 
