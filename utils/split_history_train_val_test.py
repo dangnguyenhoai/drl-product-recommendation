@@ -44,14 +44,14 @@ def parse_args():
     parser.add_argument(
         "--val_ratio",
         type=float,
-        default=0.1,
+        default=0.15,
         help="Validation ratio per user history",
     )
 
     parser.add_argument(
         "--test_ratio",
         type=float,
-        default=0.2,
+        default=0.15,
         help="Test ratio per user history",
     )
 

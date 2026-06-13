@@ -116,6 +116,8 @@ Dự án sử dụng dữ liệu đơn hàng dạng Instacart:
 
 Sau tiền xử lý, mỗi user được biểu diễn thành chuỗi item index. Item index là id nội bộ của 1000 sản phẩm phổ biến nhất. Demo sẽ map ngược item index sang `product_id` và `product_name` thật từ raw CSV.
 
+Train/validation/test được chia theo thời gian trong lịch sử của từng user với tỉ lệ `70/15/15`. Vì cùng một tập user được giữ lại rồi mới chia chuỗi hành vi của từng user, số lượng users ở train, validation và test bằng nhau; số interactions mới phản ánh tỉ lệ split.
+
 Thống kê dữ liệu đã xử lý:
 
 | Split | Users | Interactions | Unique items | Avg actions/user |
@@ -142,8 +144,8 @@ python -m utils.split_history_train_val_test `
   --val_output_path data/processed/val_history.pkl `
   --test_output_path data/processed/test_history.pkl `
   --train_ratio 0.7 `
-  --val_ratio 0.1 `
-  --test_ratio 0.2 `
+  --val_ratio 0.15 `
+  --test_ratio 0.15 `
   --min_history_len 11
 ```
 
@@ -201,9 +203,9 @@ python -m evaluation.run_val_test_suite `
 
 ## Kết quả huấn luyện
 
-Biểu đồ huấn luyện của DQN:
+Biểu đồ huấn luyện của DQN sau khi làm mượt bằng rolling mean 100 episode:
 
-![Biểu đồ huấn luyện DQN](outputs/plots/visualization_smoke/dqn_training.png)
+![Biểu đồ huấn luyện DQN đã làm mượt](outputs/plots/dqn_training.png)
 
 Một số biểu đồ log huấn luyện bổ sung:
 
@@ -230,7 +232,7 @@ Checkpoint: outputs/checkpoints/dqn_recency5_stable_best.pth
 
 ## Kết quả test cuối
 
-![Biểu đồ so sánh recommendation metrics](outputs/plots/visualization_smoke/recommendation_metrics.png)
+![Biểu đồ so sánh recommendation metrics](outputs/plots/recommendation_metrics.png)
 
 | Method | Avg Reward | HitRate@5 | Precision@5 | Recall@5 | NDCG@5 | Type |
 |---|---:|---:|---:|---:|---:|---|
